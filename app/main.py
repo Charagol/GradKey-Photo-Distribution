@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="毕业季专属相册",
-    version="0.1.0",
+    version="2.0.0",
     description="本地 FastAPI + 阿里云 OSS，动静分离，隐私隔离。",
 )
 

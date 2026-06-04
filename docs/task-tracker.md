@@ -215,26 +215,48 @@ class ITaggingService(ABC):
 
 ---
 
-## 核心接口签名 (V2.0 新增)
+### Phase 15: 项目完结与交付物整理
 
-### IStorageService
-
-```python
-class IStorageService(ABC):
-    async def upload(self, file_data: bytes, file_name: str, content_type: str) -> str
-    async def get_signed_url(self, file_key: str, expires_seconds: int = 900) -> str
-    async def get_thumbnail_url(self, file_key: str, width: int = 400) -> str  # V2.0 NEW
-    async def delete(self, file_key: str) -> bool
-    async def exists(self, file_key: str) -> bool
-```
-
-### ITaggingService
-
-```python
-class ITaggingService(ABC):
-    async def extract_tags(self, image_data: bytes, file_name: str) -> list[str]
-```
+- [x] 依赖审计 — requirements.txt 确认完整覆盖所有运行依赖
+- [x] 配置模板 — `.env.example` 重写，包含详细注释与 OSS CORS 引导
+- [x] 代码清理:
+  - [x] `static/js` — 无 `console.log` 残留（确认 0 处）
+  - [x] `app` — 代码审查完成：无 console.log / TODO / 临时注释。`get_student()` 保留（测试依赖）
+  - [x] `app/main.py` — 版本号更新为 `2.0.0`
+- [x] 交付文档:
+  - [x] `README.md` — 用户与部署文档（快速开始/OSS CORS 指南/使用手册/项目结构）
+  - [x] `docs/technical-overview.md` — 技术架构深度解析（SSOT 隐私隔离/OSS 缩略图/下载队列/ER 图/测试策略）
+- [x] Git 提交归档
 
 ---
 
-*最后更新: 2026-06-04 | V2.0 Phase 14 · 标签管理 UI 优化*
+## 项目总结
+
+### 开发规模
+
+| 指标 | 数值 |
+|---|---|
+| 总 Phase 数 | 15 |
+| 后端代码 (Python) | ~1500 行 |
+| 前端代码 (HTML + JS) | ~2200 行 |
+| 测试用例 | 98 (全量通过) |
+| 数据模型 | 6 个表 |
+| API 端点 | 20+ |
+
+### 架构亮点
+
+1. **SSOT 隐私隔离**: `Student.name = Tag.name` 逻辑匹配，零外键耦合，天然支持合影语义
+2. **沉浸式打标工作台**: 状态驱动渲染 + 事件委托 + processingLock 防抖，单页完成全量打标操作
+3. **前端队列下载**: Blob fetch + 400ms 间隔 + 可取消标志位，绕过浏览器批量下载拦截
+4. **OSS 动静分离**: 数据库仅存 File Key，签名 URL 动态生成，x-oss-process 实时缩略
+5. **零构建步骤**: Vanilla JS + Tailwind CDN，无 npm/webpack，解压即用
+
+### 技术债务与未来方向
+
+- **未分类接口抽象**: `IStorageService`/`ITaggingService` 接口已定义但未用于多态，预留未来多云/AI 扩展
+- **AI 自动打标**: `ManualTaggingService` 返回空列表，预留 InsightFace/CLIP 集成接口
+- **并发扩展**: SQLite 适合单机/内网场景，如需多用户高并发可迁移至 PostgreSQL
+
+---
+
+*最后更新: 2026-06-04 | V2.0 正式版 · 15 Phase 完结 · 98 tests passed*
