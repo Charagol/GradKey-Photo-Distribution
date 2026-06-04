@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理后台 — 毕业季专属相册</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4f46e5',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 min-h-screen text-gray-800">
+
+<!-- =========================================================================
+     Login Overlay
+     ========================================================================= -->
+<div id="login-overlay" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm">
+    <div class="bg-white rounded-2xl shadow-2xl p-8 w-96 max-w-[95vw]">
+        <div class="text-center mb-6">
+            <div class="text-5xl mb-3">🎓</div>
+            <h1 class="text-2xl font-bold text-gray-900">毕业季专属相册</h1>
+            <p class="text-sm text-gray-500 mt-1">请输入相册密码</p>
+        </div>
+        <input
+            id="login-password"
+            type="password"
+            placeholder="相册密码"
+            autocomplete="off"
+            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-400 focus:border-transparent outline-none text-lg mb-4"
+        />
+        <button
+            id="login-btn"
+            class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition-colors text-lg"
+        >
+            登 录
+        </button>
+        <p id="login-error" class="text-red-500 text-sm mt-3 text-center hidden"></p>
+    </div>
+</div>
+
+<!-- =========================================================================
+     Dashboard
+     ========================================================================= -->
+<div id="dashboard" class="hidden min-h-screen">
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="fixed top-0 left-0 h-full w-64 bg-white shadow-lg flex flex-col z-40">
+        <div class="p-6 border-b border-gray-100">
+            <h2 class="text-xl font-bold text-indigo-600">🎓 管理后台</h2>
+            <p class="text-xs text-gray-400 mt-1">毕业季相册</p>
+        </div>
+
+        <nav class="flex-1 px-3 py-4 space-y-1">
+            <button class="tab-btn active w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 transition-colors bg-indigo-50 text-indigo-700 font-medium" data-tab="students">
+                <span class="text-lg">👤</span> 学生管理
+            </button>
+            <button class="tab-btn w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 transition-colors text-gray-600 hover:bg-gray-50" data-tab="tags">
+                <span class="text-lg">🏷️</span> 标签管理
+            </button>
+            <button class="tab-btn w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 transition-colors text-gray-600 hover:bg-gray-50" data-tab="images">
+                <span class="text-lg">🖼️</span> 图片管理
+            </button>
+            <button class="tab-btn w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 transition-colors text-gray-600 hover:bg-gray-50" data-tab="settings">
+                <span class="text-lg">⚙️</span> 相册设置
+            </button>
+        </nav>
+
+        <div class="p-4 border-t border-gray-100">
+            <button id="logout-btn" class="w-full py-2 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors text-sm flex items-center justify-center gap-2">
+                <span>🚪</span> 退出登录
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main id="main-content" class="ml-64 p-8">
+
+        <!-- ══════════ 学生管理 ══════════ -->
+        <section id="tab-students" class="tab-panel">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-2xl font-bold">👤 学生管理</h3>
+            </div>
+
+            <!-- 添加学生 -->
+            <div class="card mb-6">
+                <div class="flex gap-3">
+                    <input id="student-name-input" type="text" placeholder="输入学生姓名" autocomplete="off"
+                           class="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-400 focus:border-transparent outline-none"/>
+                    <button id="add-student-btn"
+                            class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors whitespace-nowrap">
+                        添 加
+                    </button>
+                </div>
+            </div>
+
+            <!-- 学生列表 -->
+            <div class="card overflow-x-auto">
+                <table class="w-full min-w-[600px]">
+                    <thead>
+                        <tr class="border-b border-gray-200 text-left text-sm text-gray-500">
+                            <th class="pb-3 font-medium">姓名</th>
+                            <th class="pb-3 font-medium">个人密钥</th>
+                            <th class="pb-3 font-medium">创建时间</th>
+                            <th class="pb-3 font-medium">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="students-tbody"></tbody>
+                </table>
+                <p id="students-empty" class="text-gray-400 text-center py-8 hidden">暂无学生，请添加。</p>
+            </div>
+        </section>
+
+        <!-- ══════════ 标签管理 ══════════ -->
+        <section id="tab-tags" class="tab-panel hidden">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-2xl font-bold">🏷️ 标签管理</h3>
+            </div>
+
+            <!-- 添加标签 -->
+            <div class="card mb-6 max-w-md">
+                <div class="flex gap-3">
+                    <input id="tag-name-input" type="text" placeholder="输入标签名称" autocomplete="off"
+                           class="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-400 focus:border-transparent outline-none"/>
+                    <button id="add-tag-btn"
+                            class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors whitespace-nowrap">
+                        添 加
+                    </button>
+                </div>
+            </div>
+
+            <!-- 标签列表 -->
+            <div id="tags-list" class="flex flex-wrap gap-3"></div>
+            <p id="tags-empty" class="text-gray-400 text-center py-8 hidden">暂无标签，请添加。</p>
+        </section>
+
+        <!-- ══════════ 图片管理 ══════════ -->
+        <section id="tab-images" class="tab-panel hidden">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-2xl font-bold">🖼️ 图片管理</h3>
+            </div>
+
+            <!-- 上传区域 -->
+            <div class="card mb-6">
+                <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-end">
+                    <div class="flex-1 w-full">
+                        <label class="block text-sm font-medium text-gray-600 mb-1">选择图片</label>
+                        <input id="image-files" type="file" multiple accept="image/*"
+                               class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-indigo-50 file:text-indigo-600 hover:file:bg-indigo-100"/>
+                    </div>
+                    <div class="flex-1 w-full">
+                        <label class="block text-sm font-medium text-gray-600 mb-1">标签（逗号分隔）</label>
+                        <input id="image-tags" type="text" placeholder="如: 张三,李四,毕业典礼" autocomplete="off"
+                               class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-400 focus:border-transparent outline-none"/>
+                    </div>
+                    <button id="upload-btn"
+                            class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors whitespace-nowrap">
+                        上 传
+                    </button>
+                </div>
+                <p id="upload-status" class="text-sm mt-3 hidden"></p>
+            </div>
+
+            <!-- 图片网格 -->
+            <div id="image-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"></div>
+            <p id="images-empty" class="text-gray-400 text-center py-12 hidden">暂无图片，请上传。</p>
+        </section>
+
+        <!-- ══════════ 相册设置 ══════════ -->
+        <section id="tab-settings" class="tab-panel hidden">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-2xl font-bold">⚙️ 相册设置</h3>
+            </div>
+
+            <div class="card max-w-md">
+                <label class="block text-sm font-medium text-gray-600 mb-1">新密码</label>
+                <input id="new-password" type="password" placeholder="输入新密码" autocomplete="off"
+                       class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-400 focus:border-transparent outline-none mb-3"/>
+                <label class="block text-sm font-medium text-gray-600 mb-1">确认密码</label>
+                <input id="confirm-password" type="password" placeholder="再次输入新密码" autocomplete="off"
+                       class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-400 focus:border-transparent outline-none mb-4"/>
+                <button id="update-password-btn"
+                        class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors">
+                    更新密码
+                </button>
+                <p id="settings-status" class="text-sm mt-3 text-center hidden"></p>
+            </div>
+        </section>
+
+    </main>
+</div>
+
+<!-- =========================================================================
+     Toast Container
+     ========================================================================= -->
+<div id="toast-container" class="fixed bottom-6 right-6 z-[100] flex flex-col gap-2"></div>
+
+<script src="/static/js/admin.js"></script>
+</body>
+</html>
