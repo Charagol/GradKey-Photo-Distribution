@@ -26,6 +26,7 @@ const state = {
 // ============================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
+    bindEvents();
     state.token = sessionStorage.getItem('student_token');
     state.studentName = sessionStorage.getItem('student_name');
     if (state.token && state.studentName) {
@@ -50,7 +51,6 @@ function showMain() {
     document.getElementById('login-overlay').classList.add('hidden');
     document.getElementById('main-app').classList.remove('hidden');
     document.getElementById('student-name-display').textContent = `— ${escapeHtml(state.studentName)}`;
-    bindEvents();
 }
 
 function clearToken() {
