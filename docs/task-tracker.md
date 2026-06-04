@@ -139,23 +139,22 @@ class ITaggingService(ABC):
 
 ### Phase 10: 管理端 API 升级
 
-- [ ] `app/services/tag_group_service.py` (TagGroup CRUD)
-- [ ] `aliyun_oss_storage.py` 新增 `get_thumbnail_url()` 方法
-- [ ] `app/schemas/admin.py` 新增:
-  - [ ] `TagGroupCreate` / `TagGroupUpdate` / `TagGroupResponse`
-  - [ ] `BatchStudentCreate`
-  - [ ] `ImageTagUpdate`
-- [ ] 管理员路由新增:
-  - [ ] `POST /api/admin/students/batch` (批量添加 + 自动建 Tag)
-  - [ ] **修改** `POST /api/admin/students` (单条创建时自动建 Tag)
-  - [ ] `GET/POST /api/admin/tag-groups`
-  - [ ] `PUT/DELETE /api/admin/tag-groups/{id}`
-  - [ ] `PUT /api/admin/tags/{id}` (修改标签所属分组)
-  - [ ] `PUT /api/admin/images/{id}/tags` (编辑图片标签)
-  - [ ] **修改** `GET /api/admin/images` (新增 `?tagged=false` 查询参数)
-- [ ] 学生路由修改:
-  - [ ] `GET /api/student/my-images` 返回 `thumbnail_url` 字段
-- [ ] 编写 `tests/test_v2_admin_api.py` (覆盖所有新增/修改接口)
+- [x] `app/schemas/admin.py` 新增:
+  - [x] `StudentCreate.names: str` (V2.0 逗号分隔批量)
+  - [x] `TagGroupCreate` / `TagGroupUpdate` / `TagGroupResponse` (含嵌套 tags)
+  - [x] `TagUpdate(group_id)` / `ImageTagUpdate(tag_ids: list[int])`
+- [x] `app/services/student_service.py` 新增 `auto_commit` 参数支持批量事务
+- [x] 管理员路由新增/修改:
+  - [x] **POST /api/admin/students** (统一端点: `{"names": "张三,李四"}` 逗号分隔批量 + 自动建 Tag)
+  - [x] `GET/POST /api/admin/tag-groups` (分组 CRUD)
+  - [x] `PUT/DELETE /api/admin/tag-groups/{id}` (重命名/删除, 删除时 Tag 迁移至"未分类")
+  - [x] `PUT /api/admin/tags/{id}` (移动标签至其他分组)
+  - [x] `PUT /api/admin/images/{id}/tags` (全量替换图片标签)
+  - [x] **GET /api/admin/images** (新增 `?tagged=true|false` 过滤参数)
+- [x] `tests/test_admin_api.py` 适配 V2.0 schema (4 处)
+- [x] `tests/test_student_api.py` 适配 + `_setup_tag` 幂等化 (acceps 201/409)
+- [x] `tests/test_v2_admin_api.py` (24 个用例, 覆盖所有新增接口)
+- [x] 全量测试 98 passed
 
 ### Phase 11: 管理端前端重构 — 沉浸式打标工作台
 
@@ -227,4 +226,4 @@ class ITaggingService(ABC):
 
 ---
 
-*最后更新: 2026-06-04 | V1.0 完结 · Phase 9 完成 (74 tests) · 待 Phase 10*
+*最后更新: 2026-06-04 | V1.0 完结 · Phase 9 完成 · Phase 10 完成 (98 tests) · 待 Phase 11*

@@ -157,12 +157,12 @@ class TestStudentAPI:
         """创建学生后列表应包含该学生，且含 secret_key。"""
         headers = _admin_auth(client)
         resp = client.post(
-            "/api/admin/students", json={"name": "张三"}, headers=headers
+            "/api/admin/students", json={"names": "张三"}, headers=headers
         )
         assert resp.status_code == 201
         created = resp.json()
-        assert created["name"] == "张三"
-        assert len(created["secret_key"]) == 6
+        assert created[0]["name"] == "张三"
+        assert len(created[0]["secret_key"]) == 6
 
         # 列表
         resp = client.get("/api/admin/students", headers=headers)
@@ -174,9 +174,9 @@ class TestStudentAPI:
         """修改学生姓名后返回新名字。"""
         headers = _admin_auth(client)
         create_resp = client.post(
-            "/api/admin/students", json={"name": "李四"}, headers=headers
+            "/api/admin/students", json={"names": "李四"}, headers=headers
         )
-        sid = create_resp.json()["id"]
+        sid = create_resp.json()[0]["id"]
 
         resp = client.put(
             f"/api/admin/students/{sid}", json={"name": "李四丰"}, headers=headers
@@ -188,9 +188,9 @@ class TestStudentAPI:
         """删除学生返回 204，GET 列表不再包含。"""
         headers = _admin_auth(client)
         create_resp = client.post(
-            "/api/admin/students", json={"name": "王五"}, headers=headers
+            "/api/admin/students", json={"names": "王五"}, headers=headers
         )
-        sid = create_resp.json()["id"]
+        sid = create_resp.json()[0]["id"]
 
         resp = client.delete(f"/api/admin/students/{sid}", headers=headers)
         assert resp.status_code == 204
@@ -204,10 +204,10 @@ class TestStudentAPI:
         """重置密钥后新旧值不同。"""
         headers = _admin_auth(client)
         create_resp = client.post(
-            "/api/admin/students", json={"name": "赵六"}, headers=headers
+            "/api/admin/students", json={"names": "赵六"}, headers=headers
         )
-        sid = create_resp.json()["id"]
-        old_key = create_resp.json()["secret_key"]
+        sid = create_resp.json()[0]["id"]
+        old_key = create_resp.json()[0]["secret_key"]
 
         resp = client.post(
             f"/api/admin/students/{sid}/reset-key", headers=headers

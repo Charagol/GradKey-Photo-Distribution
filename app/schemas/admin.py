@@ -2,6 +2,8 @@
 
 ImageResponse 是关键模型 — 包含动态生成的临时签名 URL，
 因此不使用 from_attributes，而是手动构建。
+
+V2.0: 新增 TagGroup、TagUpdate、ImageTagUpdate、批量学生 Schema。
 """
 
 from datetime import datetime
@@ -13,9 +15,12 @@ from pydantic import BaseModel, ConfigDict
 
 
 class StudentCreate(BaseModel):
-    """创建学生请求。"""
+    """创建学生请求 — V2.0 统一接受逗号分隔姓名。
 
-    name: str
+    Example: {"names": "张三"} 或 {"names": "张三,李四,王五"}
+    """
+
+    names: str
 
 
 class StudentUpdate(BaseModel):
@@ -51,10 +56,52 @@ class TagResponse(BaseModel):
 
     id: int
     name: str
+    group_id: int  # V2.0: 所属分组 ID
     created_at: datetime
 
 
+class TagUpdate(BaseModel):
+    """修改标签所属分组请求。"""
+
+    group_id: int
+
+
+# ── TagGroup ──
+
+
+class TagGroupCreate(BaseModel):
+    """创建标签分组请求。"""
+
+    name: str
+
+
+class TagGroupUpdate(BaseModel):
+    """修改标签分组请求。"""
+
+    name: str
+
+
+class TagGroupResponse(BaseModel):
+    """标签分组响应（含嵌套标签列表）。
+
+    嵌套策略: TagResponse 不含 group 关系字段，避免无限递归。
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    created_at: datetime
+    tags: list[TagResponse] = []
+
+
 # ── Image ──
+
+
+class ImageTagUpdate(BaseModel):
+    """编辑图片标签请求 — 全量替换。"""
+
+    tag_ids: list[int]
 
 
 class ImageResponse(BaseModel):

@@ -1,4 +1,4 @@
-"""管理员路由 — 学生 / 标签 / 图片 / 相册设置的 CRUD API。
+"""管理员路由 — 学生 / 标签 / 标签分组 / 图片 / 相册设置的 CRUD API。
 
 所有接口均受 get_current_admin JWT 中间件保护。
 Image 资源通过 IStorageService 管理阿里云 OSS 文件。
@@ -15,14 +15,20 @@ from app.dependencies import get_storage_service
 from app.middleware.jwt_middleware import get_current_admin
 from app.models.image import Image
 from app.models.tag import Tag
+from app.models.tag_group import DEFAULT_TAG_GROUP_NAME, TagGroup
 from app.schemas.admin import (
     ImageListResponse,
     ImageResponse,
+    ImageTagUpdate,
     StudentCreate,
     StudentResponse,
     StudentUpdate,
     TagCreate,
+    TagGroupCreate,
+    TagGroupResponse,
+    TagGroupUpdate,
     TagResponse,
+    TagUpdate,
 )
 from app.schemas.auth import AlbumPasswordUpdate
 from app.services.aliyun_oss_storage import AliyunOssStorageService
@@ -30,6 +36,7 @@ from app.services.auth_service import update_album_password
 from app.services.student_service import (
     create_student,
     delete_student,
+    generate_secret_key,
     list_students,
     regenerate_key,
     update_student,
@@ -55,10 +62,49 @@ async def list_students_view(db: Session = Depends(get_db)):
     return list_students(db)
 
 
-@router.post("/students", response_model=StudentResponse, status_code=201)
-async def create_student_view(body: StudentCreate, db: Session = Depends(get_db)):
-    """创建学生，自动生成 6 位个人密钥。"""
-    return create_student(db, body.name)
+@router.post("/students", response_model=list[StudentResponse], status_code=201)
+async def create_students_view(body: StudentCreate, db: Session = Depends(get_db)):
+    """创建学生，支持逗号分隔批量导入，自动为每个学生创建同名 Tag。
+
+    V2.0 统一端点:
+    - 单人: {"names": "张三"}
+    - 多人: {"names": "张三,李四,王五"}
+    - 重复 Tag 名静默跳过（不报错）
+    - 整个操作在同一事务中完成，all-or-nothing
+    """
+    # 解析、去重、验证
+    raw_names = [n.strip() for n in body.names.split(",") if n.strip()]
+    seen: set[str] = set()
+    names: list[str] = []
+    for n in raw_names:
+        if n not in seen:
+            seen.add(n)
+            names.append(n)
+
+    if not names:
+        raise HTTPException(status_code=400, detail="至少需要提供一个姓名")
+
+    created_students: list = []
+    try:
+        for name in names:
+            # 创建学生（暂不提交）
+            student = create_student(db, name, auto_commit=False)
+            created_students.append(student)
+
+            # 自动创建同名 Tag（若已存在则跳过）
+            existing_tag = db.query(Tag).filter(Tag.name == name).first()
+            if not existing_tag:
+                tag = Tag(name=name)  # before_insert 自动归入"未分类"
+                db.add(tag)
+
+        db.commit()
+        for s in created_students:
+            db.refresh(s)
+    except Exception:
+        db.rollback()
+        raise
+
+    return created_students
 
 
 @router.put("/students/{student_id}", response_model=StudentResponse)
@@ -127,6 +173,109 @@ async def delete_tag_view(tag_id: int, db: Session = Depends(get_db)):
     return Response(status_code=204)
 
 
+@router.put("/tags/{tag_id}", response_model=TagResponse)
+async def update_tag_view(tag_id: int, body: TagUpdate, db: Session = Depends(get_db)):
+    """修改标签所属分组。"""
+    tag = db.query(Tag).filter(Tag.id == tag_id).first()
+    if tag is None:
+        raise HTTPException(status_code=404, detail="标签不存在")
+
+    group = db.query(TagGroup).filter(TagGroup.id == body.group_id).first()
+    if group is None:
+        raise HTTPException(status_code=400, detail="分组不存在")
+
+    tag.group_id = group.id
+    db.commit()
+    db.refresh(tag)
+    return tag
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# TagGroup CRUD
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+@router.get("/tag-groups", response_model=list[TagGroupResponse])
+async def list_tag_groups_view(db: Session = Depends(get_db)):
+    """列出所有标签分组（含嵌套的标签列表）。"""
+    return db.query(TagGroup).order_by(TagGroup.id).all()
+
+
+@router.post("/tag-groups", response_model=TagGroupResponse, status_code=201)
+async def create_tag_group_view(body: TagGroupCreate, db: Session = Depends(get_db)):
+    """创建标签分组。"""
+    existing = db.query(TagGroup).filter(TagGroup.name == body.name).first()
+    if existing:
+        raise HTTPException(status_code=409, detail="分组已存在")
+    group = TagGroup(name=body.name)
+    db.add(group)
+    db.commit()
+    db.refresh(group)
+    return group
+
+
+@router.put("/tag-groups/{group_id}", response_model=TagGroupResponse)
+async def update_tag_group_view(
+    group_id: int, body: TagGroupUpdate, db: Session = Depends(get_db)
+):
+    """重命名标签分组。"""
+    group = db.query(TagGroup).filter(TagGroup.id == group_id).first()
+    if group is None:
+        raise HTTPException(status_code=404, detail="分组不存在")
+
+    # 检查新名称是否被其他分组占用
+    conflict = (
+        db.query(TagGroup)
+        .filter(TagGroup.name == body.name, TagGroup.id != group_id)
+        .first()
+    )
+    if conflict:
+        raise HTTPException(status_code=409, detail="分组名已存在")
+
+    group.name = body.name
+    db.commit()
+    db.refresh(group)
+    return group
+
+
+@router.delete("/tag-groups/{group_id}", status_code=204)
+async def delete_tag_group_view(group_id: int, db: Session = Depends(get_db)):
+    """删除标签分组，组内 Tag 迁移至"未分类"。
+
+    禁止删除默认"未分类"分组。
+    """
+    group = db.query(TagGroup).filter(TagGroup.id == group_id).first()
+    if group is None:
+        raise HTTPException(status_code=404, detail="分组不存在")
+    if group.name == DEFAULT_TAG_GROUP_NAME:
+        raise HTTPException(status_code=400, detail="不能删除默认'未分类'分组")
+
+    # 查找/创建默认分组（防御性）
+    default_group = (
+        db.query(TagGroup)
+        .filter(TagGroup.name == DEFAULT_TAG_GROUP_NAME)
+        .first()
+    )
+    if default_group is None:
+        default_group = TagGroup(name=DEFAULT_TAG_GROUP_NAME)
+        db.add(default_group)
+        db.flush()
+
+    default_group_id = default_group.id
+
+    # 将该分组下的所有 Tag 迁移至默认分组（绕过 ORM 避免 session 状态冲突）
+    db.query(Tag).filter(Tag.group_id == group_id).update(
+        {Tag.group_id: default_group_id}, synchronize_session=False
+    )
+
+    # 清除 session 缓存（防止 ORM 用过期状态复写迁移结果）
+    db.expire_all()
+
+    db.delete(group)
+    db.commit()
+    return Response(status_code=204)
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # Image Management
 # ═══════════════════════════════════════════════════════════════════════════
@@ -134,11 +283,24 @@ async def delete_tag_view(tag_id: int, db: Session = Depends(get_db)):
 
 @router.get("/images", response_model=ImageListResponse)
 async def list_images_view(
+    tagged: bool | None = None,
     db: Session = Depends(get_db),
     storage: AliyunOssStorageService = Depends(get_storage_service),
 ):
-    """列出所有图片，动态注入临时签名 URL。"""
-    images = db.query(Image).order_by(Image.uploaded_at.desc()).all()
+    """列出图片，动态注入临时签名 URL。
+
+    V2.0 tagged 参数:
+    - None (默认): 返回全部图片
+    - true: 仅返回已有标签的图片
+    - false: 仅返回未打标的图片（沉浸式打标工作台未处理池）
+    """
+    query = db.query(Image)
+    if tagged is True:
+        query = query.filter(Image.tags.any())
+    elif tagged is False:
+        query = query.filter(~Image.tags.any())
+
+    images = query.order_by(Image.uploaded_at.desc()).all()
     result: list[ImageResponse] = []
 
     for img in images:
@@ -251,6 +413,54 @@ async def delete_image_view(
     db.delete(image)
     db.commit()
     return Response(status_code=204)
+
+
+@router.put("/images/{image_id}/tags", response_model=ImageResponse)
+async def update_image_tags_view(
+    image_id: int,
+    body: ImageTagUpdate,
+    db: Session = Depends(get_db),
+    storage: AliyunOssStorageService = Depends(get_storage_service),
+):
+    """编辑图片标签 — 全量替换。
+
+    V2.0 沉浸式打标核心接口:
+    - 传入 tag_ids 列表，完全替换该图片的标签关联
+    - 传入空列表可清空所有标签
+    """
+    image = db.query(Image).filter(Image.id == image_id).first()
+    if image is None:
+        raise HTTPException(status_code=404, detail="图片不存在")
+
+    # 验证所有 tag_id 有效
+    if body.tag_ids:
+        tags = db.query(Tag).filter(Tag.id.in_(body.tag_ids)).all()
+        found_ids = {t.id for t in tags}
+        requested_ids = set(body.tag_ids)
+        if found_ids != requested_ids:
+            missing = requested_ids - found_ids
+            raise HTTPException(
+                status_code=400, detail=f"标签不存在: {sorted(missing)}"
+            )
+    else:
+        tags = []
+
+    # SQLAlchemy M:N collection replace — 自动管理 image_tags 表
+    image.tags = tags
+    db.commit()
+    db.refresh(image)
+
+    url = await storage.get_signed_url(image.file_key)
+    return ImageResponse(
+        id=image.id,
+        file_key=image.file_key,
+        file_name=image.file_name,
+        content_type=image.content_type,
+        file_size=image.file_size,
+        uploaded_at=image.uploaded_at,
+        url=url,
+        tags=[TagResponse.model_validate(t) for t in image.tags],
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════

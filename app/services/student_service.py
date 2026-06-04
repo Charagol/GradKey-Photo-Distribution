@@ -32,20 +32,27 @@ def generate_secret_key(length: int = _KEY_LENGTH) -> str:
     return "".join(secrets.choice(_KEY_CHARS) for _ in range(length))
 
 
-def create_student(db: Session, name: str) -> Student:
+def create_student(db: Session, name: str, auto_commit: bool = True) -> Student:
     """创建学生并自动生成个人密钥。
+
+    V2.0: auto_commit=False 时仅 flush 获取 ID，由调用方统一提交。
+    用于批量创建学生时的单事务控制。
 
     Args:
         db: 数据库会话。
         name: 学生姓名。
+        auto_commit: 是否自动提交（默认 True，向后兼容 V1.0）。
 
     Returns:
-        Student: 新创建的学生对象（已刷新含 id 和密钥）。
+        Student: 新创建的学生对象（已获取 ID，auto_commit=True 时已 refresh）。
     """
     student = Student(name=name, secret_key=generate_secret_key())
     db.add(student)
-    db.commit()
-    db.refresh(student)
+    if auto_commit:
+        db.commit()
+        db.refresh(student)
+    else:
+        db.flush()  # 仅获取 ID，不提交事务
     return student
 
 

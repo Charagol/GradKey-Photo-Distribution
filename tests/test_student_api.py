@@ -156,20 +156,35 @@ def client(test_app):
 def _setup_student(client, admin_headers, name):
     """通过管理员接口创建学生，返回 (student_id, secret_key)。"""
     resp = client.post(
-        "/api/admin/students", json={"name": name}, headers=admin_headers
+        "/api/admin/students", json={"names": name}, headers=admin_headers
     )
     assert resp.status_code == 201
     data = resp.json()
-    return data["id"], data["secret_key"]
+    return data[0]["id"], data[0]["secret_key"]
 
 
 def _setup_tag(client, admin_headers, name):
-    """通过管理员接口创建标签，返回 tag_id。"""
+    """通过管理员接口创建标签，返回 tag_id。幂等：若已存在则查询返回。"""
+    # 先查是否已存在（student 创建时会自动创建同名 tag）
+    resp = client.get("/api/admin/tags", headers=admin_headers)
+    if resp.status_code == 200:
+        for t in resp.json():
+            if t["name"] == name:
+                return t["id"]
+
+    # 不存在则创建
     resp = client.post(
         "/api/admin/tags", json={"name": name}, headers=admin_headers
     )
-    assert resp.status_code == 201
-    return resp.json()["id"]
+    assert resp.status_code in (201, 409), f"Unexpected tag status: {resp.status_code}"
+    if resp.status_code == 201:
+        return resp.json()["id"]
+    # 409 冲突：再次查询
+    resp = client.get("/api/admin/tags", headers=admin_headers)
+    for t in resp.json():
+        if t["name"] == name:
+            return t["id"]
+    pytest.fail(f"Tag '{name}' not found after 409 conflict")
 
 
 def _upload_fake_image(client, admin_headers, filename, content_type, tags_json):
