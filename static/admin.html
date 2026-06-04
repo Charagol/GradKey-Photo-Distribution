@@ -1,207 +1,354 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>管理后台 — 毕业季专属相册</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#4f46e5',
-                    }
-                }
-            }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>管理后台 — 毕业季专属相册</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#4f46e5'
+          }
         }
-    </script>
+      }
+    }
+  </script>
 </head>
-<body class="bg-gray-50 min-h-screen text-gray-800">
+<body class="bg-gray-50 min-h-screen">
 
-<!-- =========================================================================
-     Login Overlay
-     ========================================================================= -->
-<div id="login-overlay" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm">
-    <div class="bg-white rounded-2xl shadow-2xl p-8 w-96 max-w-[95vw]">
-        <div class="text-center mb-6">
-            <div class="text-5xl mb-3">🎓</div>
-            <h1 class="text-2xl font-bold text-gray-900">毕业季专属相册</h1>
-            <p class="text-sm text-gray-500 mt-1">请输入相册密码</p>
-        </div>
-        <input
-            id="login-password"
-            type="password"
-            placeholder="相册密码"
-            autocomplete="off"
-            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-400 focus:border-transparent outline-none text-lg mb-4"
-        />
-        <button
-            id="login-btn"
-            class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition-colors text-lg"
-        >
-            登 录
-        </button>
-        <p id="login-error" class="text-red-500 text-sm mt-3 text-center hidden"></p>
+  <!-- ================================================================ -->
+  <!-- Login Overlay                                                     -->
+  <!-- ================================================================ -->
+  <div id="login-overlay" class="fixed inset-0 z-50 bg-gray-100 flex items-center justify-center">
+    <div class="w-96 bg-white rounded-2xl shadow-xl p-8">
+      <div class="text-center mb-6">
+        <div class="text-5xl mb-3">🎓</div>
+        <h1 class="text-xl font-bold text-gray-900">管理后台</h1>
+        <p class="text-sm text-gray-500 mt-1">请输入相册密码</p>
+      </div>
+      <input
+        id="login-password"
+        type="password"
+        placeholder="相册密码"
+        autocomplete="current-password"
+        class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-400 focus:border-transparent outline-none transition-shadow mb-3"
+      />
+      <p id="login-error" class="text-sm text-red-500 mb-3 hidden"></p>
+      <button id="login-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-lg transition-colors">
+        登录
+      </button>
     </div>
-</div>
+  </div>
 
-<!-- =========================================================================
-     Dashboard
-     ========================================================================= -->
-<div id="dashboard" class="hidden min-h-screen">
+  <!-- ================================================================ -->
+  <!-- Dashboard (initially hidden)                                     -->
+  <!-- ================================================================ -->
+  <div id="dashboard" class="hidden min-h-screen flex flex-col">
 
-    <!-- Sidebar -->
-    <aside id="sidebar" class="fixed top-0 left-0 h-full w-64 bg-white shadow-lg flex flex-col z-40">
-        <div class="p-6 border-b border-gray-100">
-            <h2 class="text-xl font-bold text-indigo-600">🎓 管理后台</h2>
-            <p class="text-xs text-gray-400 mt-1">毕业季相册</p>
+    <!-- ── Topbar ── -->
+    <header id="topbar" class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 flex-shrink-0 z-30">
+      <div class="flex items-center gap-3">
+        <span class="text-xl">🎓</span>
+        <h1 class="text-lg font-bold text-gray-900">毕业季专属相册 · 管理后台</h1>
+      </div>
+      <button id="logout-btn" class="px-4 py-2 text-sm text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+        退出登录
+      </button>
+    </header>
+
+    <!-- ── Body: Sidebar + Content ── -->
+    <div class="flex flex-1 overflow-hidden">
+
+      <!-- Sidebar -->
+      <nav id="sidebar" class="w-56 bg-white border-r border-gray-200 flex flex-col flex-shrink-0">
+        <div class="p-4 space-y-1">
+          <button class="nav-btn w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium transition-colors bg-indigo-50 text-indigo-700" data-tab="workspace">
+            🎯 打标工作台
+          </button>
+          <button class="nav-btn w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-gray-600 hover:bg-gray-50" data-tab="students">
+            👤 学生管理
+          </button>
+          <button class="nav-btn w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-gray-600 hover:bg-gray-50" data-tab="tag-groups">
+            📂 标签分组
+          </button>
+          <button class="nav-btn w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-gray-600 hover:bg-gray-50" data-tab="images">
+            🖼️ 图片管理
+          </button>
+          <button class="nav-btn w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-gray-600 hover:bg-gray-50" data-tab="settings">
+            ⚙️ 相册设置
+          </button>
+        </div>
+        <div class="mt-auto p-4 text-xs text-gray-400 border-t border-gray-100">
+          V2.0 · 沉浸式打标
+        </div>
+      </nav>
+
+      <!-- Main Content -->
+      <main id="main-content" class="flex-1 overflow-y-auto p-6">
+
+        <!-- ============================================================ -->
+        <!-- Tab: Workspace (打标工作台)                                   -->
+        <!-- ============================================================ -->
+        <div id="tab-workspace" class="tab-panel">
+
+          <!-- Workspace Area (visible when unprocessed images exist) -->
+          <div id="workspace-area">
+            <div class="flex gap-6">
+
+              <!-- Left: Unprocessed Pool -->
+              <div id="unprocessed-pool" class="w-3/5 min-w-0">
+                <div class="flex items-center justify-between mb-4">
+                  <h2 class="text-lg font-bold text-gray-900">📸 待打标图片</h2>
+                  <span id="unprocessed-count" class="bg-indigo-100 text-indigo-700 text-xs font-medium px-2.5 py-1 rounded-full"></span>
+                </div>
+                <div id="unprocessed-grid" class="grid grid-cols-3 gap-3">
+                  <!-- Rendered by JS -->
+                </div>
+              </div>
+
+              <!-- Right: Tag Pool -->
+              <div id="tag-pool" class="w-2/5 min-w-0">
+                <div class="mb-4">
+                  <h2 class="text-lg font-bold text-gray-900">🏷️ 选择标签</h2>
+                  <p class="text-xs text-gray-500 mt-1">点击标签为当前高亮图片打标，自动推进下一张</p>
+                </div>
+                <div id="tag-group-panels" class="space-y-4">
+                  <!-- Rendered by JS -->
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Workspace Empty (shown when no unprocessed images) -->
+          <div id="workspace-empty" class="hidden text-center py-20">
+            <div class="text-6xl mb-4">🎉</div>
+            <h2 class="text-2xl font-bold text-gray-900 mb-2">所有图片已处理完毕</h2>
+            <p class="text-gray-500">所有图片都已打上标签，干得漂亮！</p>
+          </div>
+
+          <!-- Processed Section (always visible below workspace) -->
+          <div id="processed-section" class="mt-8 pt-6 border-t border-gray-200">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-lg font-bold text-gray-900">📁 已处理图片</h2>
+              <span id="processed-count" class="bg-green-100 text-green-700 text-xs font-medium px-2.5 py-1 rounded-full"></span>
+            </div>
+            <!-- Filter buttons -->
+            <div class="flex gap-2 mb-4">
+              <button class="processed-filter-btn px-4 py-1.5 rounded-full text-sm font-medium transition-colors bg-indigo-600 text-white" data-filter="all">全部</button>
+              <button class="processed-filter-btn px-4 py-1.5 rounded-full text-sm font-medium transition-colors bg-gray-100 text-gray-600 hover:bg-gray-200" data-filter="tagged">已打标</button>
+              <button class="processed-filter-btn px-4 py-1.5 rounded-full text-sm font-medium transition-colors bg-gray-100 text-gray-600 hover:bg-gray-200" data-filter="untagged">未打标</button>
+            </div>
+            <div id="processed-grid" class="grid grid-cols-4 gap-3">
+              <!-- Rendered by JS -->
+            </div>
+            <p id="processed-empty" class="text-center text-gray-400 py-12 hidden">暂无已处理图片</p>
+          </div>
+
         </div>
 
-        <nav class="flex-1 px-3 py-4 space-y-1">
-            <button class="tab-btn active w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 transition-colors bg-indigo-50 text-indigo-700 font-medium" data-tab="students">
-                <span class="text-lg">👤</span> 学生管理
-            </button>
-            <button class="tab-btn w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 transition-colors text-gray-600 hover:bg-gray-50" data-tab="tags">
-                <span class="text-lg">🏷️</span> 标签管理
-            </button>
-            <button class="tab-btn w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 transition-colors text-gray-600 hover:bg-gray-50" data-tab="images">
-                <span class="text-lg">🖼️</span> 图片管理
-            </button>
-            <button class="tab-btn w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 transition-colors text-gray-600 hover:bg-gray-50" data-tab="settings">
-                <span class="text-lg">⚙️</span> 相册设置
-            </button>
-        </nav>
+        <!-- ============================================================ -->
+        <!-- Tab: Students (学生管理)                                     -->
+        <!-- ============================================================ -->
+        <div id="tab-students" class="tab-panel hidden">
+          <h2 class="text-lg font-bold text-gray-900 mb-4">👤 学生管理</h2>
 
-        <div class="p-4 border-t border-gray-100">
-            <button id="logout-btn" class="w-full py-2 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors text-sm flex items-center justify-center gap-2">
-                <span>🚪</span> 退出登录
-            </button>
+          <!-- Batch Create Card -->
+          <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6 max-w-xl">
+            <h3 class="font-medium text-gray-800 mb-3">添加学生（逗号分隔批量）</h3>
+            <div class="flex gap-2">
+              <input
+                id="student-names-input"
+                type="text"
+                placeholder="张三,李四,王五"
+                class="flex-1 px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-400 focus:border-transparent outline-none text-sm"
+              />
+              <button id="add-students-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-5 py-2 rounded-lg transition-colors whitespace-nowrap">
+                添加
+              </button>
+            </div>
+          </div>
+
+          <!-- Student Table -->
+          <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead class="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th class="text-left px-4 py-3 font-medium text-gray-600">姓名</th>
+                    <th class="text-left px-4 py-3 font-medium text-gray-600">个人密钥</th>
+                    <th class="text-left px-4 py-3 font-medium text-gray-600">创建时间</th>
+                    <th class="text-left px-4 py-3 font-medium text-gray-600">操作</th>
+                  </tr>
+                </thead>
+                <tbody id="students-tbody">
+                  <!-- Rendered by JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <p id="students-empty" class="text-center text-gray-400 py-12 hidden">暂无学生数据，请先添加</p>
         </div>
-    </aside>
 
-    <!-- Main Content -->
-    <main id="main-content" class="ml-64 p-8">
+        <!-- ============================================================ -->
+        <!-- Tab: Tag Groups (标签分组管理)                               -->
+        <!-- ============================================================ -->
+        <div id="tab-tag-groups" class="tab-panel hidden">
+          <h2 class="text-lg font-bold text-gray-900 mb-4">📂 标签分组管理</h2>
 
-        <!-- ══════════ 学生管理 ══════════ -->
-        <section id="tab-students" class="tab-panel">
-            <div class="flex items-center justify-between mb-6">
-                <h3 class="text-2xl font-bold">👤 学生管理</h3>
+          <!-- New Group Card -->
+          <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6 max-w-xl">
+            <h3 class="font-medium text-gray-800 mb-3">新建分组</h3>
+            <div class="flex gap-2">
+              <input
+                id="group-name-input"
+                type="text"
+                placeholder="分组名称，如：寝室、专业"
+                class="flex-1 px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-400 focus:border-transparent outline-none text-sm"
+              />
+              <button id="add-group-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-5 py-2 rounded-lg transition-colors whitespace-nowrap">
+                创建
+              </button>
             </div>
+          </div>
 
-            <!-- 添加学生 -->
-            <div class="card mb-6">
-                <div class="flex gap-3">
-                    <input id="student-name-input" type="text" placeholder="输入学生姓名" autocomplete="off"
-                           class="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-400 focus:border-transparent outline-none"/>
-                    <button id="add-student-btn"
-                            class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors whitespace-nowrap">
-                        添 加
-                    </button>
-                </div>
+          <!-- Group List -->
+          <div id="tag-group-list" class="space-y-4">
+            <!-- Rendered by JS -->
+          </div>
+          <p id="groups-empty" class="text-center text-gray-400 py-12 hidden">暂无分组数据</p>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- Tab: Images (图片上传与管理)                                 -->
+        <!-- ============================================================ -->
+        <div id="tab-images" class="tab-panel hidden">
+          <h2 class="text-lg font-bold text-gray-900 mb-4">🖼️ 图片管理</h2>
+
+          <!-- Upload Card -->
+          <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
+            <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-end">
+              <div class="flex-1 w-full sm:w-auto">
+                <label class="block text-sm font-medium text-gray-600 mb-1">选择图片</label>
+                <input
+                  id="image-files"
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-indigo-50 file:text-indigo-600 hover:file:bg-indigo-100"
+                />
+              </div>
+              <div class="w-full sm:w-48">
+                <label class="block text-sm font-medium text-gray-600 mb-1">关联标签</label>
+                <input
+                  id="image-tags"
+                  type="text"
+                  placeholder="张三,李四（逗号分隔）"
+                  class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-400 focus:border-transparent outline-none text-sm"
+                />
+              </div>
+              <button id="upload-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-6 py-2 rounded-lg transition-colors whitespace-nowrap">
+                上传
+              </button>
             </div>
+            <p id="upload-status" class="text-sm text-gray-500 mt-3 hidden"></p>
+          </div>
 
-            <!-- 学生列表 -->
-            <div class="card overflow-x-auto">
-                <table class="w-full min-w-[600px]">
-                    <thead>
-                        <tr class="border-b border-gray-200 text-left text-sm text-gray-500">
-                            <th class="pb-3 font-medium">姓名</th>
-                            <th class="pb-3 font-medium">个人密钥</th>
-                            <th class="pb-3 font-medium">创建时间</th>
-                            <th class="pb-3 font-medium">操作</th>
-                        </tr>
-                    </thead>
-                    <tbody id="students-tbody"></tbody>
-                </table>
-                <p id="students-empty" class="text-gray-400 text-center py-8 hidden">暂无学生，请添加。</p>
+          <!-- Image Grid -->
+          <div id="image-manage-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+            <!-- Rendered by JS -->
+          </div>
+          <p id="images-manage-empty" class="text-center text-gray-400 py-12 hidden">暂无图片</p>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- Tab: Settings (相册设置)                                     -->
+        <!-- ============================================================ -->
+        <div id="tab-settings" class="tab-panel hidden">
+          <h2 class="text-lg font-bold text-gray-900 mb-4">⚙️ 相册设置</h2>
+          <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 max-w-md">
+            <h3 class="font-medium text-gray-800 mb-3">修改相册密码</h3>
+            <div class="space-y-3">
+              <input
+                id="new-password"
+                type="password"
+                placeholder="新密码"
+                class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-400 focus:border-transparent outline-none text-sm"
+              />
+              <input
+                id="confirm-password"
+                type="password"
+                placeholder="确认新密码"
+                class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-400 focus:border-transparent outline-none text-sm"
+              />
+              <button id="update-password-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
+                更新密码
+              </button>
             </div>
-        </section>
+            <p id="settings-status" class="text-sm mt-3 hidden"></p>
+          </div>
+        </div>
 
-        <!-- ══════════ 标签管理 ══════════ -->
-        <section id="tab-tags" class="tab-panel hidden">
-            <div class="flex items-center justify-between mb-6">
-                <h3 class="text-2xl font-bold">🏷️ 标签管理</h3>
-            </div>
+      </main>
+    </div>
+  </div>
 
-            <!-- 添加标签 -->
-            <div class="card mb-6 max-w-md">
-                <div class="flex gap-3">
-                    <input id="tag-name-input" type="text" placeholder="输入标签名称" autocomplete="off"
-                           class="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-400 focus:border-transparent outline-none"/>
-                    <button id="add-tag-btn"
-                            class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors whitespace-nowrap">
-                        添 加
-                    </button>
-                </div>
-            </div>
+  <!-- ================================================================ -->
+  <!-- Edit Tags Modal                                                  -->
+  <!-- ================================================================ -->
+  <div id="edit-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center">
+    <div class="modal-backdrop absolute inset-0 bg-gray-900/60 backdrop-blur-sm"></div>
+    <div class="modal-content relative bg-white rounded-2xl shadow-2xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-bold text-gray-900">编辑图片标签</h3>
+        <button id="modal-close-btn" class="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+      </div>
 
-            <!-- 标签列表 -->
-            <div id="tags-list" class="flex flex-wrap gap-3"></div>
-            <p id="tags-empty" class="text-gray-400 text-center py-8 hidden">暂无标签，请添加。</p>
-        </section>
+      <!-- Image preview -->
+      <div class="aspect-[4/3] bg-gray-100 rounded-lg overflow-hidden mb-4">
+        <img id="modal-preview-img" src="" alt="" class="w-full h-full object-cover" />
+      </div>
 
-        <!-- ══════════ 图片管理 ══════════ -->
-        <section id="tab-images" class="tab-panel hidden">
-            <div class="flex items-center justify-between mb-6">
-                <h3 class="text-2xl font-bold">🖼️ 图片管理</h3>
-            </div>
+      <!-- Current tags -->
+      <div class="mb-4">
+        <p class="text-sm font-medium text-gray-600 mb-2">当前标签</p>
+        <div id="modal-current-tags" class="flex flex-wrap gap-2 min-h-[2rem]">
+          <!-- Rendered by JS -->
+        </div>
+        <p id="modal-no-tags" class="text-sm text-gray-400 hidden">暂无标签</p>
+      </div>
 
-            <!-- 上传区域 -->
-            <div class="card mb-6">
-                <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-end">
-                    <div class="flex-1 w-full">
-                        <label class="block text-sm font-medium text-gray-600 mb-1">选择图片</label>
-                        <input id="image-files" type="file" multiple accept="image/*"
-                               class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-indigo-50 file:text-indigo-600 hover:file:bg-indigo-100"/>
-                    </div>
-                    <div class="flex-1 w-full">
-                        <label class="block text-sm font-medium text-gray-600 mb-1">标签（逗号分隔）</label>
-                        <input id="image-tags" type="text" placeholder="如: 张三,李四,毕业典礼" autocomplete="off"
-                               class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-400 focus:border-transparent outline-none"/>
-                    </div>
-                    <button id="upload-btn"
-                            class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors whitespace-nowrap">
-                        上 传
-                    </button>
-                </div>
-                <p id="upload-status" class="text-sm mt-3 hidden"></p>
-            </div>
+      <!-- Available tags to add -->
+      <div class="mb-4">
+        <p class="text-sm font-medium text-gray-600 mb-2">添加标签</p>
+        <div id="modal-available-tags" class="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
 
-            <!-- 图片网格 -->
-            <div id="image-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"></div>
-            <p id="images-empty" class="text-gray-400 text-center py-12 hidden">暂无图片，请上传。</p>
-        </section>
+      <!-- Actions -->
+      <div class="flex gap-3 justify-end">
+        <button id="modal-cancel-btn" class="px-5 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+          取消
+        </button>
+        <button id="modal-save-btn" class="px-5 py-2.5 text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors">
+          保存
+        </button>
+      </div>
+    </div>
+  </div>
 
-        <!-- ══════════ 相册设置 ══════════ -->
-        <section id="tab-settings" class="tab-panel hidden">
-            <div class="flex items-center justify-between mb-6">
-                <h3 class="text-2xl font-bold">⚙️ 相册设置</h3>
-            </div>
+  <!-- ================================================================ -->
+  <!-- Toast Container                                                  -->
+  <!-- ================================================================ -->
+  <div id="toast-container" class="fixed bottom-6 right-6 z-[100] flex flex-col gap-2"></div>
 
-            <div class="card max-w-md">
-                <label class="block text-sm font-medium text-gray-600 mb-1">新密码</label>
-                <input id="new-password" type="password" placeholder="输入新密码" autocomplete="off"
-                       class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-400 focus:border-transparent outline-none mb-3"/>
-                <label class="block text-sm font-medium text-gray-600 mb-1">确认密码</label>
-                <input id="confirm-password" type="password" placeholder="再次输入新密码" autocomplete="off"
-                       class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-400 focus:border-transparent outline-none mb-4"/>
-                <button id="update-password-btn"
-                        class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors">
-                    更新密码
-                </button>
-                <p id="settings-status" class="text-sm mt-3 text-center hidden"></p>
-            </div>
-        </section>
-
-    </main>
-</div>
-
-<!-- =========================================================================
-     Toast Container
-     ========================================================================= -->
-<div id="toast-container" class="fixed bottom-6 right-6 z-[100] flex flex-col gap-2"></div>
-
-<script src="/static/js/admin.js"></script>
+  <!-- ================================================================ -->
+  <!-- Script                                                            -->
+  <!-- ================================================================ -->
+  <script src="/static/js/admin.js"></script>
 </body>
 </html>
