@@ -9,7 +9,7 @@
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.routes import admin_router, auth_router, student_router
@@ -40,10 +40,16 @@ async def admin_page():
     return FileResponse("static/admin.html")
 
 
+@app.get("/student", include_in_schema=False)
+async def student_page():
+    """学生门户 SPA 页面。"""
+    return FileResponse("static/student.html")
+
+
 @app.get("/")
-async def health_check():
-    """健康检查。"""
-    return {"status": "ok", "app": "毕业季专属相册"}
+async def root():
+    """根路径 → 重定向到学生门户。"""
+    return RedirectResponse(url="/student")
 
 
 # 挂载静态资源目录（JS / CSS / 图片等）
