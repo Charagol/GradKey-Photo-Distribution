@@ -43,10 +43,10 @@
 
 ### Phase 2: 存储与打标服务
 
-- [ ] 实现 AliyunOssStorageService (upload, get_signed_url, delete, exists)
-- [ ] 实现 ManualTaggingService (返回空列表)
-- [ ] 编写 test_storage.py
-- [ ] 编写 test_tagging.py
+- [x] 实现 AliyunOssStorageService (upload, get_signed_url, delete, exists)
+- [x] 实现 ManualTaggingService (返回空列表)
+- [x] 编写 test_storage.py
+- [x] 编写 test_tagging.py
 
 ### Phase 3: 认证与学生服务
 
