@@ -50,10 +50,10 @@
 
 ### Phase 3: 认证与学生服务
 
-- [ ] 实现 auth_service.py (JWT, 密码验证)
-- [ ] 实现 student_service.py (Student CRUD, 密钥生成)
-- [ ] 实现 jwt_middleware.py
-- [ ] 编写 test_auth.py
+- [x] 实现 auth_service.py (JWT, 密码验证)
+- [x] 实现 student_service.py (Student CRUD, 密钥生成)
+- [x] 实现 jwt_middleware.py
+- [x] 编写 test_auth.py
 
 ### Phase 4: 管理员 API 路由
 
