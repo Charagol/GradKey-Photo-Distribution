@@ -280,6 +280,11 @@ function bindEvents() {
             deleteTagGroup(Number(delBtn.dataset.id), delBtn.dataset.name);
             return;
         }
+        const tagDelBtn = e.target.closest('.tag-delete-btn');
+        if (tagDelBtn) {
+            deleteTagWithConfirmation(Number(tagDelBtn.dataset.tagId), tagDelBtn.dataset.tagName);
+            return;
+        }
         const moveSelect = e.target.closest('.move-tag-select');
         if (moveSelect) {
             moveSelect.addEventListener('change', function handler() {
@@ -867,6 +872,8 @@ function renderTagGroups() {
                                     <option value="${g.id}">${escapeHtml(g.name)}</option>
                                 `).join('')}
                             </select>
+                            <button class="tag-delete-btn text-gray-400 hover:text-red-500 ml-0.5 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-colors"
+                                    data-tag-id="${tag.id}" data-tag-name="${escapeHtml(tag.name)}">&times;</button>
                         </span>
                     `).join('')}
                     ${tags.length === 0 ? '<span class="text-xs text-gray-400">暂无标签</span>' : ''}
@@ -910,6 +917,35 @@ async function moveTagToGroup(tagId, groupId) {
         showToast('标签已移动', 'success');
         await loadTagGroups();
         renderTagGroups();
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
+}
+
+async function deleteTagWithConfirmation(tagId, tagName) {
+    // Count affected photos
+    const count = state.allImages.filter(img =>
+        img.tags && img.tags.some(t => t.id === tagId)
+    ).length;
+
+    const confirmed = confirm(
+        `确定要删除标签「${tagName}」吗？\n\n` +
+        `此操作将导致该标签从 ${count} 张照片中移除。` +
+        (count > 0 ? `\n如果是学生姓名标签，该学生将无法在门户看到这些照片。` : '')
+    );
+    if (!confirmed) return;
+
+    try {
+        await apiDelete(`/api/admin/tags/${tagId}`);
+        showToast(`标签「${tagName}」已删除`, 'success');
+        // Reload images and tag groups to refresh all state
+        await Promise.all([loadImages(), loadTagGroups()]);
+        splitImages();
+        renderTagGroups();
+        if (state.currentTab === 'workspace') {
+            renderWorkspace();
+            renderProcessedGrid();
+        }
     } catch (err) {
         showToast(err.message, 'error');
     }

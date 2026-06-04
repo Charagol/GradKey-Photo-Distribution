@@ -204,6 +204,17 @@ class ITaggingService(ABC):
 
 ---
 
+### Phase 14: 标签管理 UI 优化与安全删除
+
+- [x] 侧边栏 "标签分组" → "标签管理"
+- [x] 面板标题 "标签分组管理" → "标签管理"
+- [x] 标签 chip 添加删除按钮 (×)，hover 变红 (`hover:text-red-500`)
+- [x] 删除确认对话框显示受影响的照片数量: `state.allImages.filter(img => img.tags.some(t => t.id === tagId)).length`
+- [x] 删除后自动刷新 images + tag groups + workspace 视图
+- [x] "未分类" 默认分组始终可见，样式与其他分组一致
+
+---
+
 ## 核心接口签名 (V2.0 新增)
 
 ### IStorageService
@@ -226,4 +237,4 @@ class ITaggingService(ABC):
 
 ---
 
-*最后更新: 2026-06-04 | V2.0 完结 · 98 tests passed · tag v2.0.0*
+*最后更新: 2026-06-04 | V2.0 Phase 14 · 标签管理 UI 优化*
