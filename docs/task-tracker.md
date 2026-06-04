@@ -124,15 +124,18 @@ class ITaggingService(ABC):
 
 ### Phase 9: 数据库迁移与模型更新
 
-- [ ] 创建 `app/models/tag_group.py` (TagGroup 模型)
-- [ ] Tag 模型新增 `group_id` 外键
-- [ ] 更新 `app/models/__init__.py` 注册 TagGroup
-- [ ] 编写迁移脚本 `app/migrations/v2_migrate.py`
-  - [ ] 创建 tag_group 表
-  - [ ] 插入默认"未分类"分组
-  - [ ] ALTER tag 表添加 group_id 列
-  - [ ] 现有 Tag 默认归入"未分类"
-- [ ] 编写 `tests/test_tag_group.py` (模型 + 迁移验证)
+- [x] 创建 `app/models/tag_group.py` (TagGroup 模型)
+- [x] Tag 模型新增 `group_id` 外键
+- [x] 更新 `app/models/__init__.py` 注册 TagGroup
+- [x] 编写迁移脚本 `app/migrations/v2_migrate.py`
+  - [x] 创建 tag_group 表
+  - [x] 插入默认"未分类"分组
+  - [x] SQLite 三表重建添加 group_id 列
+  - [x] 现有 Tag 默认归入"未分类"
+- [x] 编写 `tests/test_tag_group.py` (13 个用例，模型 + 迁移验证)
+- [x] 测试夹具注入默认 TagGroup（test_admin_api.py / test_student_api.py）
+- [x] Tag.before_insert 事件确保向后兼容
+- [x] 生产数据库迁移验证通过（album.db: 5 tags → 未分类）
 
 ### Phase 10: 管理端 API 升级
 
@@ -224,4 +227,4 @@ class ITaggingService(ABC):
 
 ---
 
-*最后更新: 2026-06-04 | V1.0 完结 · V2.0 规划完成，待实施*
+*最后更新: 2026-06-04 | V1.0 完结 · Phase 9 完成 (74 tests) · 待 Phase 10*

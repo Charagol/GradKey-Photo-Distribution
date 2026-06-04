@@ -87,6 +87,14 @@ def test_app(db_engine, mock_storage):
         autocommit=False, autoflush=False, bind=db_engine
     )
 
+    # ── V2.0: 创建默认标签分组（确保测试中 Tag 创建不报错）───
+    with TestingSessionLocal() as session:
+        from app.models.tag_group import TagGroup
+        if not session.query(TagGroup).filter_by(name="未分类").first():
+            session.add(TagGroup(name="未分类"))
+            session.commit()
+    # ────────────────────────────────────────────────────
+
     def override_get_db():
         session = TestingSessionLocal()
         try:
