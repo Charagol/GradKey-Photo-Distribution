@@ -10,7 +10,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routes import admin_router, auth_router
+from app.routes import admin_router, auth_router, student_router
 
 app = FastAPI(
     title="毕业季专属相册",
@@ -29,6 +29,7 @@ app.add_middleware(
 # 注册路由
 app.include_router(auth_router)
 app.include_router(admin_router)
+app.include_router(student_router)
 
 
 @app.get("/")

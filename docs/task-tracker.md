@@ -70,10 +70,10 @@
 
 ### Phase 5: 学生 API 路由
 
-- [ ] POST /api/student/auth (双重验证)
-- [ ] GET /api/student/my-images (Tag 匹配隐私隔离)
-- [ ] GET /api/student/my-tags
-- [ ] 编写 test_student_api.py
+- [x] POST /api/student/auth (双重验证)
+- [x] GET /api/student/my-images (Tag 匹配隐私隔离)
+- [x] GET /api/student/my-tags
+- [x] 编写 test_student_api.py
 
 ### Phase 6: 管理员前端 (admin.html)
 
