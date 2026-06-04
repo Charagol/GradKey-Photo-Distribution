@@ -120,4 +120,108 @@ class ITaggingService(ABC):
 
 ---
 
-*最后更新: 2026-06-04*
+## V2.0 Phase 进度
+
+### Phase 9: 数据库迁移与模型更新
+
+- [ ] 创建 `app/models/tag_group.py` (TagGroup 模型)
+- [ ] Tag 模型新增 `group_id` 外键
+- [ ] 更新 `app/models/__init__.py` 注册 TagGroup
+- [ ] 编写迁移脚本 `app/migrations/v2_migrate.py`
+  - [ ] 创建 tag_group 表
+  - [ ] 插入默认"未分类"分组
+  - [ ] ALTER tag 表添加 group_id 列
+  - [ ] 现有 Tag 默认归入"未分类"
+- [ ] 编写 `tests/test_tag_group.py` (模型 + 迁移验证)
+
+### Phase 10: 管理端 API 升级
+
+- [ ] `app/services/tag_group_service.py` (TagGroup CRUD)
+- [ ] `aliyun_oss_storage.py` 新增 `get_thumbnail_url()` 方法
+- [ ] `app/schemas/admin.py` 新增:
+  - [ ] `TagGroupCreate` / `TagGroupUpdate` / `TagGroupResponse`
+  - [ ] `BatchStudentCreate`
+  - [ ] `ImageTagUpdate`
+- [ ] 管理员路由新增:
+  - [ ] `POST /api/admin/students/batch` (批量添加 + 自动建 Tag)
+  - [ ] **修改** `POST /api/admin/students` (单条创建时自动建 Tag)
+  - [ ] `GET/POST /api/admin/tag-groups`
+  - [ ] `PUT/DELETE /api/admin/tag-groups/{id}`
+  - [ ] `PUT /api/admin/tags/{id}` (修改标签所属分组)
+  - [ ] `PUT /api/admin/images/{id}/tags` (编辑图片标签)
+  - [ ] **修改** `GET /api/admin/images` (新增 `?tagged=false` 查询参数)
+- [ ] 学生路由修改:
+  - [ ] `GET /api/student/my-images` 返回 `thumbnail_url` 字段
+- [ ] 编写 `tests/test_v2_admin_api.py` (覆盖所有新增/修改接口)
+
+### Phase 11: 管理端前端重构 — 沉浸式打标工作台
+
+- [ ] 重写 `static/admin.html` 布局:
+  - [ ] 左侧边栏新增"打标台"Tab
+  - [ ] 打标工作台：左右分栏容器
+  - [ ] 标签池按分组折叠面板
+  - [ ] 已打标图片网格（下方）
+  - [ ] 标签编辑弹窗组件
+- [ ] 重写 `static/js/admin.js`:
+  - [ ] 未处理池数据加载与自动选中第一张
+  - [ ] 点击标签 → PUT 打标 → 图片消失 + 自动下一张
+  - [ ] 池清空时 UI 自动隐藏
+  - [ ] 已打标图片点击 → 标签编辑弹窗
+  - [ ] 标签分组管理页面（增删改）
+  - [ ] 批量添加学生（逗号分隔解析）
+  - [ ] 原学生/标签/设置/上传功能保留并适配新布局
+
+### Phase 12: 学生端前端重构 — 多选与队列下载
+
+- [ ] 修改 `static/student.html`:
+  - [ ] 导航栏新增"多选"切换按钮
+  - [ ] 底部浮现下载栏（选中 N 张时出现）
+  - [ ] 选中态 UI：边框高亮 + 遮罩 + ✓ 图标
+- [ ] 修改 `static/js/student.js`:
+  - [ ] 缩略图加载模式（使用 `thumbnail_url` 作为 img src）
+  - [ ] 多选模式状态管理 + toggle
+  - [ ] `DownloadQueue` 类实现:
+    - [ ] fetch → Blob → `URL.createObjectURL` → `<a download>` 触发
+    - [ ] 300ms 间隔序列化下载
+    - [ ] 进度 UI 更新 "正在下载 X/Y"
+    - [ ] 总大小估算
+    - [ ] 中止功能
+  - [ ] 保留原有标签过滤 + Lightbox + 键盘导航功能
+
+### Phase 13: V2 集成测试与文档
+
+- [ ] 全量测试 `pytest tests/ -v` (V1.0 61 + V2.0 新增)
+- [ ] 数据库迁移回滚验证
+- [ ] OSS 缩略图 URL 端到端测试（需真实 OSS 环境）
+- [ ] 移动端 Safari / Chrome 兼容性测试:
+  - [ ] 多选触摸交互
+  - [ ] 队列下载体验
+  - [ ] 缩略图渲染
+- [ ] 更新 `docs/graduation-album-design-v2.md` 标注实际实现偏差
+- [ ] Git 提交并打 tag: `v2.0.0`
+
+---
+
+## 核心接口签名 (V2.0 新增)
+
+### IStorageService
+
+```python
+class IStorageService(ABC):
+    async def upload(self, file_data: bytes, file_name: str, content_type: str) -> str
+    async def get_signed_url(self, file_key: str, expires_seconds: int = 900) -> str
+    async def get_thumbnail_url(self, file_key: str, width: int = 400) -> str  # V2.0 NEW
+    async def delete(self, file_key: str) -> bool
+    async def exists(self, file_key: str) -> bool
+```
+
+### ITaggingService
+
+```python
+class ITaggingService(ABC):
+    async def extract_tags(self, image_data: bytes, file_name: str) -> list[str]
+```
+
+---
+
+*最后更新: 2026-06-04 | V1.0 完结 · V2.0 规划完成，待实施*
