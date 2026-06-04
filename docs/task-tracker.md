@@ -57,16 +57,16 @@
 
 ### Phase 4: 管理员 API 路由
 
-- [ ] POST /api/admin/auth
-- [ ] GET/POST /api/admin/students
-- [ ] PUT/DELETE /api/admin/students/{id}
-- [ ] POST /api/admin/students/{id}/reset-key
-- [ ] GET /api/admin/images
-- [ ] POST /api/admin/images (多图上传+打标)
-- [ ] DELETE /api/admin/images/{id}
-- [ ] GET/POST/DELETE /api/admin/tags
-- [ ] PUT /api/admin/album-password
-- [ ] 编写 test_admin_api.py
+- [x] POST /api/admin/auth
+- [x] GET/POST /api/admin/students
+- [x] PUT/DELETE /api/admin/students/{id}
+- [x] POST /api/admin/students/{id}/reset-key
+- [x] GET /api/admin/images
+- [x] POST /api/admin/images (多图上传+打标)
+- [x] DELETE /api/admin/images/{id}
+- [x] GET/POST/DELETE /api/admin/tags
+- [x] PUT /api/admin/album-password
+- [x] 编写 test_admin_api.py
 
 ### Phase 5: 学生 API 路由
 
