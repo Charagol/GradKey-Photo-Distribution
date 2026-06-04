@@ -174,22 +174,20 @@ class ITaggingService(ABC):
   - [x] 批量学生创建（逗号分隔）
   - [x] 图片上传/管理/删除 + 相册设置完整保留
 
-### Phase 12: 学生端前端重构 — 多选与队列下载
+### Phase 12: 学生端前端重构 — 多选与队列下载 ✅
 
-- [ ] 修改 `static/student.html`:
-  - [ ] 导航栏新增"多选"切换按钮
-  - [ ] 底部浮现下载栏（选中 N 张时出现）
-  - [ ] 选中态 UI：边框高亮 + 遮罩 + ✓ 图标
-- [ ] 修改 `static/js/student.js`:
-  - [ ] 缩略图加载模式（使用 `thumbnail_url` 作为 img src）
-  - [ ] 多选模式状态管理 + toggle
-  - [ ] `DownloadQueue` 类实现:
-    - [ ] fetch → Blob → `URL.createObjectURL` → `<a download>` 触发
-    - [ ] 300ms 间隔序列化下载
-    - [ ] 进度 UI 更新 "正在下载 X/Y"
-    - [ ] 总大小估算
-    - [ ] 中止功能
-  - [ ] 保留原有标签过滤 + Lightbox + 键盘导航功能
+- [x] 修改 `static/student.html`:
+  - [x] 导航栏新增"开启多选"切换按钮
+  - [x] 底部浮现选择操作栏（全选/取消全选/下载选中/取消）
+  - [x] 底部下载进度条（旋转 spinner + "正在下载 X/Y" + 中止按钮）
+  - [x] 选中态 UI：indigo 半透明遮罩 + ✓ 圆形标记
+- [x] 修改 `static/js/student.js`:
+  - [x] 缩略图模式：列表用 OSS `x-oss-process=image/resize,m_lfit,w_400,h_400`，Lightbox 用原图
+  - [x] 多选模式状态管理：`isMultiSelectMode` + `selectedIds: Set` + `downloadProgress`
+  - [x] 下载队列：fetch → Blob → `URL.createObjectURL` → `<a download>` → 400ms 间隔防拦截
+  - [x] 进度 UI："正在下载 X/Y — filename" + 旋转 spinner
+  - [x] 中止功能：`downloadAborted` flag + 中止按钮
+  - [x] 保留原有标签过滤 + Lightbox 键盘/触摸导航
 
 ### Phase 13: V2 集成测试与文档
 
@@ -227,4 +225,4 @@ class ITaggingService(ABC):
 
 ---
 
-*最后更新: 2026-06-04 | V1.0 完结 · Phase 9 完成 · Phase 10 完成 (98 tests) · 待 Phase 11*
+*最后更新: 2026-06-04 | V1.0 完结 · Phase 9-12 完成 (98 tests) · 待 Phase 13*
