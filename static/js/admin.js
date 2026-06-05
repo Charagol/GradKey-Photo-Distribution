@@ -344,13 +344,13 @@ function switchTab(name) {
     const panel = document.getElementById(`tab-${name}`);
     if (panel) panel.classList.remove('hidden');
 
-    // Load data
+    // Load data (fire-and-forget with error handling)
     if (name === 'workspace') {
         loadAllWorkspaceData();
     } else if (name === 'students') {
         loadStudents();
     } else if (name === 'tag-groups') {
-        loadTagGroups();
+        loadTagGroups().catch(err => showToast(err.message, 'error'));
     } else if (name === 'images') {
         loadAllImages();
     }
@@ -376,7 +376,18 @@ async function loadImages() {
 }
 
 async function loadTagGroups() {
-    state.tagGroups = await apiGet('/api/admin/tag-groups');
+    try {
+        state.tagGroups = await apiGet('/api/admin/tag-groups');
+    } catch (err) {
+        showToast(err.message, 'error');
+        state.tagGroups = [];
+    }
+    try {
+        renderTagGroups();
+    } catch (err) {
+        console.error('renderTagGroups error:', err);
+        showToast('渲染标签分组时出错', 'error');
+    }
 }
 
 async function loadStudents() {

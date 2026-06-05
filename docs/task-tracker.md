@@ -230,6 +230,17 @@ class ITaggingService(ABC):
 
 ---
 
+### Phase 3.1: 标签管理页初始加载 Bug 修复
+
+- [x] **根因**: `loadTagGroups()` (admin.js:378) 数据加载后缺失 `renderTagGroups()` 调用
+- [x] **修复**: 
+  - `loadTagGroups()` 添加 try/catch 错误处理 + `renderTagGroups()` 调用
+  - `renderTagGroups()` 内部添加 try/catch + console.error 防静默失败
+  - `switchTab()` 中 `loadTagGroups()` 添加 `.catch()` 处理未捕获的 Promise 拒绝
+- [x] **验证**: 98/98 全量测试通过
+
+---
+
 ## 项目总结
 
 ### 开发规模
@@ -259,4 +270,4 @@ class ITaggingService(ABC):
 
 ---
 
-*最后更新: 2026-06-04 | V2.0 正式版 · 15 Phase 完结 · 98 tests passed*
+*最后更新: 2026-06-05 | V2.0 Phase 3.1 · 标签管理页加载 Bug 修复*
