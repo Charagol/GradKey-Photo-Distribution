@@ -268,8 +268,8 @@ function renderPhotoGrid() {
 
     grid.innerHTML = images.map((img, index) => {
         const isSelected = state.isMultiSelectMode && state.selectedIds.has(img.id);
-        // Use thumbnail for grid, original for lightbox
-        const gridSrc = thumbnailUrl(img.url);
+        // V3.0: prefer backend-signed thumbnail_url, fallback to client-side concat
+        const gridSrc = img.thumbnail_url || thumbnailUrl(img.url);
 
         return `
             <div class="photo-card group relative rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all cursor-pointer animate-slide-up bg-gray-100"
@@ -662,4 +662,5 @@ function escapeHtml(str) {
     const div = document.createElement('div');
     div.appendChild(document.createTextNode(str));
     return div.innerHTML;
+}
 }

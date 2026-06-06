@@ -105,7 +105,9 @@ class ImageTagUpdate(BaseModel):
 
 
 class ImageResponse(BaseModel):
-    """图片响应 — url 由 storage.get_signed_url() 动态生成。"""
+    """图片响应 — url 由 storage.get_signed_url() 动态生成。
+
+    V3.0: thumbnail_url 用于学生端网格预览（x-oss-process 参与签名）。"""
 
     id: int
     file_key: str
@@ -114,6 +116,7 @@ class ImageResponse(BaseModel):
     file_size: int | None = None
     uploaded_at: datetime
     url: str
+    thumbnail_url: str | None = None  # V3.0: 缩略图签名 URL
     tags: list[TagResponse] = []
 
 

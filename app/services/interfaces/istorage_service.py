@@ -42,6 +42,25 @@ class IStorageService(ABC):
         ...
 
     @abstractmethod
+    async def get_thumbnail_signed_url(
+        self, file_key: str, width: int = 400, height: int = 400, expires_seconds: int = 900
+    ) -> str:
+        """生成带缩略图处理参数的签名 URL。
+
+        x-oss-process 参数参与签名计算，确保签名有效性。
+
+        Args:
+            file_key: 文件的 OSS Key。
+            width: 缩略图最大宽度（px），默认 400。
+            height: 缩略图最大高度（px），默认 400。
+            expires_seconds: URL 有效期（秒），默认 900。
+
+        Returns:
+            str: 含缩略图处理参数且正确签名的临时 URL。
+        """
+        ...
+
+    @abstractmethod
     async def delete(self, file_key: str) -> bool:
         """从对象存储中删除文件。
 

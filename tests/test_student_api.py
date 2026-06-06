@@ -102,8 +102,12 @@ def mock_storage():
     async def _get_signed_url(file_key, *args, **kwargs):
         return f"https://fake-oss.example.com/signed/{file_key}?sign=mock"
 
+    async def _get_thumbnail_signed_url(file_key, *args, **kwargs):
+        return f"https://fake-oss.example.com/thumb/{file_key}?sign=mock_thumb"
+
     storage.upload.side_effect = _upload
     storage.get_signed_url.side_effect = _get_signed_url
+    storage.get_thumbnail_signed_url.side_effect = _get_thumbnail_signed_url
     storage.delete.return_value = True
     storage.exists.return_value = True
     return storage
@@ -341,10 +345,11 @@ class TestPrivacyIsolation:
         assert "zhang_li_together.png" in file_names
 
     def test_images_have_signed_urls(self):
-        """返回的每个 ImageResponse 都包含临时签名 url。"""
+        """返回的每个 ImageResponse 都包含临时签名 url 和缩略图 url。"""
         data = self._get_student_images("张三", self.zhang_key)
         for img in data["images"]:
             assert img["url"].startswith("https://fake-oss")
+            assert img.get("thumbnail_url", "").startswith("https://fake-oss")
             assert "file_key" in img
             assert "tags" in img
 

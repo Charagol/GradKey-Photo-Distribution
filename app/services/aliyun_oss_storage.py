@@ -102,6 +102,41 @@ class AliyunOssStorageService(IStorageService):
         )
         return url
 
+    async def get_thumbnail_signed_url(
+        self,
+        file_key: str,
+        width: int = 400,
+        height: int = 400,
+        expires_seconds: int | None = None,
+    ) -> str:
+        """生成含 x-oss-process 的缩略图签名 URL。
+
+        关键：将 x-oss-process 作为 params 传入 sign_url，
+        确保 OSS SDK 将其纳入 CanonicalizedResource 签名计算。
+        前端简单拼接会导致签名不匹配（403）。
+
+        Args:
+            file_key: OSS 对象 Key。
+            width: 缩略图最大宽度（px），默认 400。
+            height: 缩略图最大高度（px），默认 400。
+            expires_seconds: 有效期（秒），默认使用全局配置（900秒）。
+
+        Returns:
+            str: 含缩略图处理参数且正确签名的临时 URL。
+        """
+        if expires_seconds is None:
+            expires_seconds = self._url_expires
+
+        process_value = f"image/resize,m_lfit,w_{width},h_{height}"
+        url: str = await asyncio.to_thread(
+            self._bucket.sign_url,
+            "GET",
+            file_key,
+            expires_seconds,
+            {"x-oss-process": process_value},
+        )
+        return url
+
     async def delete(self, file_key: str) -> bool:
         """从 OSS 删除对象。
 

@@ -164,3 +164,56 @@ class TestExists:
         )
 
         assert result is False
+
+
+class TestGetThumbnailSignedUrl:
+    """get_thumbnail_signed_url 方法测试套件 (V3.0 Phase 17)。"""
+
+    def test_returns_string(self, mock_oss):
+        """验证返回值为非空字符串。"""
+        service, mock_bucket = mock_oss
+        mock_bucket.sign_url = MagicMock(return_value="https://fake-oss.com/thumb-url")
+
+        import asyncio
+        url = asyncio.run(
+            service.get_thumbnail_signed_url("images/test.jpg")
+        )
+
+        assert isinstance(url, str)
+        assert len(url) > 0
+
+    def test_passes_process_param(self, mock_oss):
+        """验证调用 sign_url 时 x-oss-process 被正确传入 params dict。"""
+        service, mock_bucket = mock_oss
+        mock_bucket.sign_url = MagicMock(return_value="https://fake-oss.com/thumb-url")
+
+        import asyncio
+        asyncio.run(service.get_thumbnail_signed_url("images/test.jpg"))
+
+        call_args = mock_bucket.sign_url.call_args
+        # Positional args: method, key, expires, params
+        assert call_args[0][0] == "GET"
+        assert call_args[0][1] == "images/test.jpg"
+        assert call_args[0][3] == {"x-oss-process": "image/resize,m_lfit,w_400,h_400"}
+
+    def test_custom_dimensions(self, mock_oss):
+        """验证自定义宽高被正确传递。"""
+        service, mock_bucket = mock_oss
+        mock_bucket.sign_url = MagicMock(return_value="https://fake-oss.com/thumb-url")
+
+        import asyncio
+        asyncio.run(service.get_thumbnail_signed_url("images/test.jpg", width=200, height=300))
+
+        call_args = mock_bucket.sign_url.call_args
+        assert call_args[0][3] == {"x-oss-process": "image/resize,m_lfit,w_200,h_300"}
+
+    def test_uses_default_expiry(self, mock_oss):
+        """验证默认有效期与全局配置一致（900 秒）。"""
+        service, mock_bucket = mock_oss
+        mock_bucket.sign_url = MagicMock(return_value="https://fake-oss.com/thumb-url")
+
+        import asyncio
+        asyncio.run(service.get_thumbnail_signed_url("images/test.jpg"))
+
+        call_args = mock_bucket.sign_url.call_args
+        assert call_args[0][2] == 900
