@@ -1196,6 +1196,3 @@ async function updatePassword() {
         statusEl.classList.remove('hidden');
     }
 }
-}
-    }
-}
