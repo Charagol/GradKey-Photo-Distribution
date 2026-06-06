@@ -319,13 +319,37 @@ class ITaggingService(ABC):
 
 ---
 
+### Phase 19: 缩略图加载失败根因修复
+
+**背景**: Phase 17 的缩略图修复未能解决根本问题 — 学生端缩略图仍然 403。
+
+#### 根因
+
+`oss2.Bucket.sign_url` 的真实签名为 `sign_url(method, key, expires, headers=None, params=None, ...)`，`params` 是第 5 个位置参数。Phase 17 代码将 `{"x-oss-process": ...}` 作为第 4 个位置参数传入，被 SDK 识别为 `headers` 而非 `params`。导致：
+- `x-oss-process` 被纳入签名计算（作为 CanonicalizedHeaders）
+- 但 **未追加到 URL Query String**（headers 不是查询参数）
+- 浏览器发起的请求与签名不匹配 → 403 Forbidden
+
+#### 修复
+
+- [x] `app/services/aliyun_oss_storage.py`: `params={"x-oss-process": ...}` 改为关键字参数传递
+- [x] `tests/test_storage.py`: 2 个测试适配（`call_args[0][3]` → `call_args.kwargs["params"]`）
+- [x] `docs/phase18-diagnosis.md`: 完整诊断报告
+
+#### 测试覆盖
+
+- [x] **验证**: 102/102 全量测试通过
+- [x] 修复后 `thumbnail_url` 应包含 `x-oss-process` 查询参数
+
+---
+
 ## 项目总结
 
 ### 开发规模
 
 | 指标 | 数值 |
 |---|---|
-| 总 Phase 数 | 18 |
+| 总 Phase 数 | 19 |
 | 后端代码 (Python) | ~1600 行 |
 | 前端代码 (HTML + JS) | ~2400 行 |
 | 测试用例 | 102 (全量通过) |
@@ -348,4 +372,4 @@ class ITaggingService(ABC):
 
 ---
 
-*最后更新: 2026-06-06 | V3.0 Phase 18 · 体验与 UI 优化*
+*最后更新: 2026-06-06 | V3.0 Phase 19 · 缩略图签名参数传递修复*
