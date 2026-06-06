@@ -133,7 +133,7 @@ class AliyunOssStorageService(IStorageService):
             "GET",
             file_key,
             expires_seconds,
-            {"x-oss-process": process_value},
+            params={"x-oss-process": process_value},
         )
         return url
 

@@ -183,7 +183,7 @@ class TestGetThumbnailSignedUrl:
         assert len(url) > 0
 
     def test_passes_process_param(self, mock_oss):
-        """验证调用 sign_url 时 x-oss-process 被正确传入 params dict。"""
+        """验证调用 sign_url 时 x-oss-process 被正确传入 params 关键字参数。"""
         service, mock_bucket = mock_oss
         mock_bucket.sign_url = MagicMock(return_value="https://fake-oss.com/thumb-url")
 
@@ -191,10 +191,11 @@ class TestGetThumbnailSignedUrl:
         asyncio.run(service.get_thumbnail_signed_url("images/test.jpg"))
 
         call_args = mock_bucket.sign_url.call_args
-        # Positional args: method, key, expires, params
+        # Positional args: method, key, expires
         assert call_args[0][0] == "GET"
         assert call_args[0][1] == "images/test.jpg"
-        assert call_args[0][3] == {"x-oss-process": "image/resize,m_lfit,w_400,h_400"}
+        # Keyword arg: params
+        assert call_args.kwargs["params"] == {"x-oss-process": "image/resize,m_lfit,w_400,h_400"}
 
     def test_custom_dimensions(self, mock_oss):
         """验证自定义宽高被正确传递。"""
@@ -205,7 +206,7 @@ class TestGetThumbnailSignedUrl:
         asyncio.run(service.get_thumbnail_signed_url("images/test.jpg", width=200, height=300))
 
         call_args = mock_bucket.sign_url.call_args
-        assert call_args[0][3] == {"x-oss-process": "image/resize,m_lfit,w_200,h_300"}
+        assert call_args.kwargs["params"] == {"x-oss-process": "image/resize,m_lfit,w_200,h_300"}
 
     def test_uses_default_expiry(self, mock_oss):
         """验证默认有效期与全局配置一致（900 秒）。"""
