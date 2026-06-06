@@ -343,13 +343,33 @@ class ITaggingService(ABC):
 
 ---
 
+### Phase 20: 管理端缩略图加载启用
+
+**背景**: Phase 19 诊断发现管理端打标工作台和图片管理均未使用缩略图，加载原图导致带宽浪费严重。
+
+#### 修复
+
+- [x] `app/routes/admin.py` `list_images_view`: 为每张图片调用 `get_thumbnail_signed_url` 填充 `thumbnail_url`
+- [x] `static/js/admin.js` `renderUnprocessedGrid()`: `img.url` → `img.thumbnail_url || img.url`
+- [x] `static/js/admin.js` `renderProcessedGrid()`: 同上
+- [x] `static/js/admin.js` `renderAllImages()`: 同上
+- [x] `openEditModal()` 预览保持 `image.url`（原图）不变
+- [x] `tests/test_admin_api.py` + `tests/test_v2_admin_api.py`: mock 补充 `get_thumbnail_signed_url`
+
+#### 测试覆盖
+
+- [x] **验证**: 102/102 全量测试通过
+- [x] 管理端带宽预计节省 95%+
+
+---
+
 ## 项目总结
 
 ### 开发规模
 
 | 指标 | 数值 |
 |---|---|
-| 总 Phase 数 | 19 |
+| 总 Phase 数 | 20 |
 | 后端代码 (Python) | ~1600 行 |
 | 前端代码 (HTML + JS) | ~2400 行 |
 | 测试用例 | 102 (全量通过) |
@@ -372,4 +392,4 @@ class ITaggingService(ABC):
 
 ---
 
-*最后更新: 2026-06-06 | V3.0 Phase 19 · 缩略图签名参数传递修复*
+*最后更新: 2026-06-06 | V3.0 Phase 20 · 管理端缩略图加载启用*
