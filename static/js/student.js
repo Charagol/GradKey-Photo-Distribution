@@ -318,6 +318,50 @@ function renderPhotoGrid() {
 }
 
 // ============================================================================
+// Multi-Select Bar (V3.0 Phase 3.3: unified above photo grid)
+// ============================================================================
+
+function renderMultiSelectBar() {
+    const bar = document.getElementById('multi-select-bar');
+    const inner = document.getElementById('multi-select-bar-inner');
+    if (!bar || !inner) return;
+
+    // 无照片时隐藏操作栏
+    if (state.allImages.length === 0) {
+        bar.classList.add('hidden');
+        return;
+    }
+    bar.classList.remove('hidden');
+
+    if (!state.isMultiSelectMode) {
+        // 普通模式：仅显示"开启多选"按钮
+        inner.innerHTML = `
+            <button class="text-sm text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 px-3 py-1.5 rounded-lg transition-colors font-medium"
+                    data-action="toggle">
+                开启多选
+            </button>`;
+    } else {
+        // 多选模式：展开完整操作栏
+        const count = state.selectedIds.size;
+        inner.innerHTML = `
+            <button class="text-sm text-indigo-600 hover:text-indigo-700 px-2 py-1 rounded transition-colors font-medium"
+                    data-action="select-all">全选</button>
+            <span class="text-gray-300 text-sm">|</span>
+            <button class="text-sm text-gray-500 hover:text-gray-700 px-2 py-1 rounded transition-colors"
+                    data-action="deselect-all">取消全选</button>
+            <span class="text-sm text-gray-600 font-medium ml-1">已选 ${count} 张</span>
+            <div class="flex-1"></div>
+            <button class="text-sm bg-indigo-600 text-white px-4 py-1.5 rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-indigo-700"
+                    data-action="download"
+                    ${count === 0 ? 'disabled' : ''}>
+                下载选中${count > 0 ? ` (${count})` : ''}
+            </button>
+            <button class="text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 px-3 py-1.5 rounded-lg transition-colors"
+                    data-action="cancel">取消</button>`;
+    }
+}
+
+// ============================================================================
 // Multi-Select Mode
 // ============================================================================
 
@@ -326,24 +370,15 @@ function toggleMultiSelectMode() {
 
     if (state.isMultiSelectMode) {
         state.selectedIds = new Set();
-        document.getElementById('multi-select-toggle-btn').textContent = '退出多选';
-        document.getElementById('multi-select-toggle-btn').classList.remove('text-indigo-600', 'hover:text-indigo-700', 'hover:bg-indigo-50');
-        document.getElementById('multi-select-toggle-btn').classList.add('text-amber-600', 'hover:text-amber-700', 'hover:bg-amber-50');
-        document.getElementById('selection-bar').classList.remove('hidden');
-        document.getElementById('selection-bar-spacer').classList.remove('hidden');
     } else {
         state.selectedIds = new Set();
         state.downloadProgress = null;
-        document.getElementById('multi-select-toggle-btn').textContent = '开启多选';
-        document.getElementById('multi-select-toggle-btn').classList.add('text-indigo-600', 'hover:text-indigo-700', 'hover:bg-indigo-50');
-        document.getElementById('multi-select-toggle-btn').classList.remove('text-amber-600', 'hover:text-amber-700', 'hover:bg-amber-50');
-        document.getElementById('selection-bar').classList.add('hidden');
-        document.getElementById('selection-bar-spacer').classList.add('hidden');
         document.getElementById('download-progress-bar').classList.add('hidden');
     }
 
+    renderMultiSelectBar();
     renderPhotoGrid();
-    updateSelectionUI();
+    updateSelectionUI();  // kept for backward compat (no-op if !isMultiSelectMode)
 }
 
 function toggleSelectImage(id) {
@@ -383,14 +418,7 @@ function deselectAll() {
 }
 
 function updateSelectionUI() {
-    if (!state.isMultiSelectMode) return;
-
-    const count = state.selectedIds.size;
-    document.getElementById('selection-count').textContent = `已选 ${count} 张`;
-
-    const downloadBtn = document.getElementById('download-selected-btn');
-    downloadBtn.textContent = count > 0 ? `下载选中 (${count})` : '下载选中';
-    downloadBtn.disabled = count === 0;
+    renderMultiSelectBar();
 }
 
 // ============================================================================
@@ -414,7 +442,7 @@ async function startDownload() {
 
     document.getElementById('download-progress-bar').classList.remove('hidden');
     document.getElementById('download-progress-text').textContent = '准备下载...';
-    document.getElementById('selection-bar').classList.add('hidden');
+    document.getElementById('multi-select-bar').classList.add('hidden');
 
     let successCount = 0;
 
@@ -460,7 +488,6 @@ async function startDownload() {
 
     // Cleanup
     document.getElementById('download-progress-bar').classList.add('hidden');
-    document.getElementById('selection-bar').classList.remove('hidden');
     state.downloadProgress = null;
 
     if (state.downloadAborted) {
@@ -474,12 +501,7 @@ async function startDownload() {
     state.selectedIds = new Set();
     state.downloadAborted = false;
 
-    document.getElementById('multi-select-toggle-btn').textContent = '开启多选';
-    document.getElementById('multi-select-toggle-btn').classList.add('text-indigo-600', 'hover:text-indigo-700', 'hover:bg-indigo-50');
-    document.getElementById('multi-select-toggle-btn').classList.remove('text-amber-600', 'hover:text-amber-700', 'hover:bg-amber-50');
-    document.getElementById('selection-bar').classList.add('hidden');
-    document.getElementById('selection-bar-spacer').classList.add('hidden');
-
+    renderMultiSelectBar();
     renderPhotoGrid();
 }
 
@@ -614,14 +636,28 @@ function bindEvents() {
         logout();
     });
 
-    // Multi-select toggle
-    document.getElementById('multi-select-toggle-btn').addEventListener('click', toggleMultiSelectMode);
-
-    // Selection bar buttons
-    document.getElementById('select-all-btn').addEventListener('click', selectAll);
-    document.getElementById('deselect-all-btn').addEventListener('click', deselectAll);
-    document.getElementById('download-selected-btn').addEventListener('click', startDownload);
-    document.getElementById('cancel-select-btn').addEventListener('click', toggleMultiSelectMode);
+    // Multi-select bar — event delegation (V3.0 Phase 3.3)
+    document.getElementById('multi-select-bar-inner').addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-action]');
+        if (!btn) return;
+        switch (btn.dataset.action) {
+            case 'toggle':
+                toggleMultiSelectMode();
+                break;
+            case 'select-all':
+                selectAll();
+                break;
+            case 'deselect-all':
+                deselectAll();
+                break;
+            case 'download':
+                if (!btn.disabled) startDownload();
+                break;
+            case 'cancel':
+                toggleMultiSelectMode();
+                break;
+        }
+    });
 
     // Download progress
     document.getElementById('abort-download-btn').addEventListener('click', abortDownload);
@@ -662,5 +698,6 @@ function escapeHtml(str) {
     const div = document.createElement('div');
     div.appendChild(document.createTextNode(str));
     return div.innerHTML;
+}
 }
 }

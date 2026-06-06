@@ -95,9 +95,6 @@
                 <span id="student-name-display" class="text-sm text-gray-400 hidden sm:inline truncate"></span>
             </div>
             <div class="flex items-center gap-2 flex-shrink-0">
-                <button id="multi-select-toggle-btn" class="text-sm text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 px-3 py-1.5 rounded-lg transition-colors font-medium">
-                    开启多选
-                </button>
                 <button id="logout-btn" class="text-sm text-gray-400 hover:text-red-500 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors">
                     退出
                 </button>
@@ -109,6 +106,13 @@
     <div id="tag-filter-bar" class="sticky top-[49px] z-20 bg-white/70 backdrop-blur-md border-b border-gray-100">
         <div class="max-w-6xl mx-auto px-4 py-3">
             <div id="tag-filter-list" class="flex gap-2 overflow-x-auto scrollbar-hide"></div>
+        </div>
+    </div>
+
+    <!-- Multi-Select Bar (V3.0 Phase 3.3) -->
+    <div id="multi-select-bar" class="hidden max-w-6xl mx-auto px-4">
+        <div id="multi-select-bar-inner" class="py-2 flex items-center gap-3 border-b border-gray-100">
+            <!-- Rendered by JS: renderMultiSelectBar() -->
         </div>
     </div>
 
