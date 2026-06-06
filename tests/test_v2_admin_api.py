@@ -115,8 +115,12 @@ def mock_storage():
     async def _get_signed_url(file_key, *args, **kwargs):
         return f"https://fake-oss.example.com/signed/{file_key}?sign=mock"
 
+    async def _get_thumbnail_signed_url(file_key, *args, **kwargs):
+        return f"https://fake-oss.example.com/thumb/{file_key}?x-oss-process=image%2Fresize%2Cm_lfit%2Cw_400%2Ch_400&sign=mock"
+
     storage.upload.side_effect = _upload
     storage.get_signed_url.side_effect = _get_signed_url
+    storage.get_thumbnail_signed_url.side_effect = _get_thumbnail_signed_url
     storage.delete.return_value = True
     storage.exists.return_value = True
     return storage

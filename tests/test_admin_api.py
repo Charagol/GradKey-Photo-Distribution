@@ -69,6 +69,7 @@ def mock_storage():
     storage = AsyncMock(spec=AliyunOssStorageService)
     storage.upload.return_value = "images/test_uuid_abc123.jpg"
     storage.get_signed_url.return_value = "https://fake-oss.example.com/signed/test_uuid_abc123.jpg?sign=mock"
+    storage.get_thumbnail_signed_url.return_value = "https://fake-oss.example.com/thumb/test_uuid_abc123.jpg?x-oss-process=image%2Fresize%2Cm_lfit%2Cw_400%2Ch_400&sign=mock"
     storage.delete.return_value = True
     storage.exists.return_value = True
     return storage

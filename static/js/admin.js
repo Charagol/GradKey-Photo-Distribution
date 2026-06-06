@@ -466,7 +466,7 @@ function renderUnprocessedGrid() {
             <div class="thumb-item ${ringClass} rounded-lg overflow-hidden cursor-pointer bg-gray-100 transition-shadow hover:shadow-md"
                  data-image-id="${img.id}">
                 <div class="aspect-[4/3]">
-                    <img src="${escapeHtml(img.url)}" alt="${escapeHtml(img.file_name || '')}"
+                    <img src="${escapeHtml(img.thumbnail_url || img.url)}" alt="${escapeHtml(img.file_name || '')}"
                          class="w-full h-full object-cover"
                          loading="lazy"
                          onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 30%22%3E%3Crect fill=%22%23f3f4f6%22 width=%2240%22 height=%2230%22/%3E%3Ctext x=%2220%22 y=%2217%22 text-anchor=%22middle%22 fill=%22%239ca3af%22 font-size=%226%22%3E🖼%3C/text%3E%3C/svg%3E'">
@@ -718,7 +718,7 @@ function renderProcessedGrid() {
                 <div class="processed-item rounded-lg overflow-hidden cursor-pointer bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
                      data-image-id="${img.id}">
                     <div class="aspect-[4/3] bg-gray-100">
-                        <img src="${escapeHtml(img.url)}" alt="${escapeHtml(img.file_name || '')}"
+                        <img src="${escapeHtml(img.thumbnail_url || img.url)}" alt="${escapeHtml(img.file_name || '')}"
                              class="w-full h-full object-cover"
                              loading="lazy"
                              onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 30%22%3E%3Crect fill=%22%23f3f4f6%22 width=%2240%22 height=%2230%22/%3E%3Ctext x=%2220%22 y=%2217%22 text-anchor=%22middle%22 fill=%22%239ca3af%22 font-size=%226%22%3E🖼%3C/text%3E%3C/svg%3E'">
@@ -1122,7 +1122,7 @@ function renderAllImages() {
     grid.innerHTML = state.allImages.map(img => `
         <div class="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
             <div class="aspect-[4/3] bg-gray-100">
-                <img src="${escapeHtml(img.url)}" alt="${escapeHtml(img.file_name || '')}"
+                <img src="${escapeHtml(img.thumbnail_url || img.url)}" alt="${escapeHtml(img.file_name || '')}"
                      class="w-full h-full object-cover"
                      loading="lazy"
                      onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 30%22%3E%3Crect fill=%22%23f3f4f6%22 width=%2240%22 height=%2230%22/%3E%3Ctext x=%2220%22 y=%2217%22 text-anchor=%22middle%22 fill=%22%239ca3af%22 font-size=%226%22%3E🖼%3C/text%3E%3C/svg%3E'">

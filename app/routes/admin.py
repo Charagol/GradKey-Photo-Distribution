@@ -305,6 +305,7 @@ async def list_images_view(
 
     for img in images:
         url = await storage.get_signed_url(img.file_key)
+        thumbnail_url = await storage.get_thumbnail_signed_url(img.file_key)
         result.append(
             ImageResponse(
                 id=img.id,
@@ -314,6 +315,7 @@ async def list_images_view(
                 file_size=img.file_size,
                 uploaded_at=img.uploaded_at,
                 url=url,
+                thumbnail_url=thumbnail_url,
                 tags=[TagResponse.model_validate(t) for t in img.tags],
             )
         )
