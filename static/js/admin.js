@@ -498,12 +498,12 @@ function renderTagPool() {
     const container = document.getElementById('tag-group-panels');
     container.innerHTML = state.tagGroups.map(group => {
         const tags = group.tags || [];
+        // 过滤空分类
+        if (tags.length === 0) return '';
+
         return `
             <div class="tag-group-panel bg-white rounded-xl border border-gray-200 p-4">
-                <div class="flex items-center justify-between mb-3">
-                    <h4 class="text-sm font-semibold text-gray-800">${escapeHtml(group.name)}</h4>
-                    <span class="text-xs text-gray-400">${tags.length} 个标签</span>
-                </div>
+                <h4 class="text-sm font-semibold text-gray-800 mb-3">${escapeHtml(group.name)}</h4>
                 <div class="flex flex-wrap gap-2">
                     ${tags.map(tag => {
                         const isSel = state.selectedTagIds.includes(tag.id);
@@ -516,7 +516,6 @@ function renderTagPool() {
                             ${escapeHtml(tag.name)}
                         </button>`;
                     }).join('')}
-                    ${tags.length === 0 ? '<span class="text-xs text-gray-400">暂无标签</span>' : ''}
                 </div>
             </div>`;
     }).join('');
