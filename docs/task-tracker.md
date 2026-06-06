@@ -230,7 +230,10 @@ class ITaggingService(ABC):
 
 ---
 
-### Phase 3.1: 标签管理页初始加载 Bug 修复
+
+## V3.0 Phase 进度
+
+### Phase 16: 标签管理页初始加载 Bug 修复
 
 - [x] **根因**: `loadTagGroups()` (admin.js:378) 数据加载后缺失 `renderTagGroups()` 调用
 - [x] **修复**: 
@@ -241,25 +244,64 @@ class ITaggingService(ABC):
 
 ---
 
+### Phase 17: 打标工作台多标签修复 + 学生端缩略图加载修复
+
+**背景**: V3.0 需修复两个 V2.0 遗留的致命缺陷。
+
+#### 任务 1: 打标工作台多标签选择 + 确认按钮模式
+
+- [x] **根因**: 标签点击立即执行 `PUT /api/admin/images/{id}/tags` 并自动推进，每张照片只能打一个标签，破坏合影语义
+- [x] **修复**:
+  - `state` 新增 `selectedTagIds: []` 字段（工作台待确认标签列表）
+  - 新增 `toggleTagSelection(tagId)` — 标签点击切换选中状态（非提交）
+  - 新增 `renderConfirmButton()` — 动态渲染确认按钮（0 选中时灰色禁用，N 选中时蓝色可点击显示计数）
+  - 新增 `confirmTags()` — 收集全部选中 tag_ids → PUT API 全量替换 → 清除选中 → 自动推进
+  - `renderTagPool()` 芯片增加选中态 CSS（蓝底蓝边框高亮）
+  - `selectImage()` / `splitImages()` 重置 `selectedTagIds`
+  - `renderWorkspace()` 调用 `renderConfirmButton()`
+  - `admin.html` 更新提示文案 + 新增 `#confirm-tags-area` 容器
+  - 事件委托：标签池点击改为 `toggleTagSelection` + 新增确认按钮 `[data-action="confirm-tags"]` 监听
+  - 与 `processingLock` 完整协调（toggle/confirm 均被锁阻塞）
+- [x] **接口行为**: `PUT /api/admin/images/{id}/tags` 不变（全量替换语义），前端一次性提交多个 tag_ids
+
+#### 任务 2: 学生端缩略图加载失败修复
+
+- [x] **根因**: `oss2.Bucket.sign_url` 签名计算不包含 `x-oss-process` 参数；前端 `thumbnailUrl()` 简单字符串拼接 `&x-oss-process=...` → OSS 服务器验证签名时纳入该参数 → 签名不匹配 → 403 Forbidden
+- [x] **修复**:
+  - `IStorageService` 新增 `get_thumbnail_signed_url(file_key, width=400, height=400, expires_seconds=900)` 抽象方法
+  - `AliyunOssStorageService` 实现：`sign_url("GET", key, expires, {"x-oss-process": "image/resize,m_lfit,w_400,h_400"})`，确保 OSS SDK 将参数纳入签名
+  - `ImageResponse` 新增 `thumbnail_url: str | None = None` 可选字段（向后兼容，管理员端无需填充）
+  - 学生 API `GET /api/student/my-images` 并行调用 `get_signed_url` 和 `get_thumbnail_signed_url` 为每张图片生成两种 URL
+  - 前端 `renderPhotoGrid()` 优先使用 `img.thumbnail_url`，降级到 `thumbnailUrl(img.url)` 作为向后兼容回退
+  - 新增 4 个 `TestGetThumbnailSignedUrl` 单元测试（返回字符串、params 传递、自定义尺寸、默认有效期）
+  - `mock_storage` fixture 更新，新增 `get_thumbnail_signed_url` side_effect
+
+#### 测试覆盖
+
+- [x] **验证**: 102/102 全量测试通过（原 98 + 新增 4 个缩略图测试）
+- [x] `test_images_have_signed_urls` 扩展断言 `thumbnail_url` 字段存在
+
+---
+
 ## 项目总结
 
 ### 开发规模
 
 | 指标 | 数值 |
 |---|---|
-| 总 Phase 数 | 15 |
-| 后端代码 (Python) | ~1500 行 |
-| 前端代码 (HTML + JS) | ~2200 行 |
-| 测试用例 | 98 (全量通过) |
+| 总 Phase 数 | 17 |
+| 后端代码 (Python) | ~1600 行 |
+| 前端代码 (HTML + JS) | ~2400 行 |
+| 测试用例 | 102 (全量通过) |
 | 数据模型 | 6 个表 |
 | API 端点 | 20+ |
 
 ### 架构亮点
 
 1. **SSOT 隐私隔离**: `Student.name = Tag.name` 逻辑匹配，零外键耦合，天然支持合影语义
-2. **沉浸式打标工作台**: 状态驱动渲染 + 事件委托 + processingLock 防抖，单页完成全量打标操作
+2. **沉浸式打标工作台**: 状态驱动渲染 + 事件委托 + processingLock 防抖，V3.0 新增多标签 toggle + 确认按钮模式，完整支持合影语义
 3. **前端队列下载**: Blob fetch + 400ms 间隔 + 可取消标志位，绕过浏览器批量下载拦截
-4. **OSS 动静分离**: 数据库仅存 File Key，签名 URL 动态生成，x-oss-process 实时缩略
+4. **OSS 动静分离**: 数据库仅存 File Key，签名 URL 动态生成，V3.0 修复 x-oss-process 参与签名确保缩略图正确加载
 5. **零构建步骤**: Vanilla JS + Tailwind CDN，无 npm/webpack，解压即用
 
 ### 技术债务与未来方向
@@ -270,4 +312,4 @@ class ITaggingService(ABC):
 
 ---
 
-*最后更新: 2026-06-05 | V2.0 Phase 3.1 · 标签管理页加载 Bug 修复*
+*最后更新: 2026-06-06 | V3.0 Phase 17 · 打标工作台多标签修复 + 学生端缩略图加载修复*
