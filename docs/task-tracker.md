@@ -283,13 +283,49 @@ class ITaggingService(ABC):
 
 ---
 
+### Phase 18: 体验与 UI 优化 — V3.0 Phase 3.3
+
+**背景**: 三个独立的用户体验优化任务，提升管理端和学生端的交互体验。
+
+#### 任务 1: 批量添加学生改为中文全角逗号分隔
+
+- [x] `app/routes/admin.py`: `split(",")` → `split("，")`
+- [x] `app/schemas/admin.py`: 更新 `StudentCreate.names` 注释为 "中文全角逗号分隔姓名"
+- [x] `static/admin.html`: 标题文案改为 "添加学生（中文逗号批量分隔）"，placeholder 改为 "张三，李四，王五"
+- [x] `static/js/admin.js`: 前端容错 `input.value.trim().replace(/,/g, '，')`
+- [x] `tests/test_v2_admin_api.py`: 4 处测试用例半角逗号改为全角（3 处数据 + 1 处空白）
+- [x] 102/102 全量测试通过
+
+#### 任务 2: 标签选择区域瀑布流布局
+
+- [x] `static/admin.html`: 新增 `.tag-waterfall` CSS 样式块（`column-count: 2; column-gap: 1rem; break-inside: avoid`）
+- [x] `static/admin.html`: `#tag-group-panels` class 从 `space-y-4` 改为 `tag-waterfall`
+- [x] `static/js/admin.js` `renderTagPool()`: 过滤空标签分组（`if (tags.length === 0) return '';`）
+- [x] `static/js/admin.js` `renderTagPool()`: 移除标签计数 `<span>`，标题简化为单行 `<h4>`
+
+#### 任务 3: 学生端多选下载 UI 收敛至统一操作栏
+
+- [x] `static/student.html`: 移除 navbar 中 `#multi-select-toggle-btn`
+- [x] `static/student.html`: 标签筛选栏下方新增 `#multi-select-bar` 统一操作栏
+- [x] `static/js/student.js`: 新增 `renderMultiSelectBar()` — 状态驱动渲染（普通/多选两模式）
+- [x] `static/js/student.js`: `updateSelectionUI()` 简化为调用 `renderMultiSelectBar()`
+- [x] `static/js/student.js`: `startDownload()` 清理逻辑移除旧 DOM 操作，改为 `renderMultiSelectBar()`
+- [x] `static/js/student.js`: 事件绑定改为 `data-action` 事件委托（`#multi-select-bar-inner`）
+- [x] `static/js/student.js`: `loadData()` 末尾调用 `renderMultiSelectBar()`
+
+#### 测试覆盖
+
+- [x] **验证**: 102/102 全量测试通过
+
+---
+
 ## 项目总结
 
 ### 开发规模
 
 | 指标 | 数值 |
 |---|---|
-| 总 Phase 数 | 17 |
+| 总 Phase 数 | 18 |
 | 后端代码 (Python) | ~1600 行 |
 | 前端代码 (HTML + JS) | ~2400 行 |
 | 测试用例 | 102 (全量通过) |
