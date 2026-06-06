@@ -73,7 +73,7 @@ async def create_students_view(body: StudentCreate, db: Session = Depends(get_db
     - 整个操作在同一事务中完成，all-or-nothing
     """
     # 解析、去重、验证
-    raw_names = [n.strip() for n in body.names.split(",") if n.strip()]
+    raw_names = [n.strip() for n in body.names.split("，") if n.strip()]
     seen: set[str] = set()
     names: list[str] = []
     for n in raw_names:

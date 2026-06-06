@@ -329,7 +329,7 @@ class TestStudentBatchAPI:
 
         resp = client.post(
             "/api/admin/students",
-            json={"names": "张三,李四,王五"},
+            json={"names": "张三，李四，王五"},
             headers=headers,
         )
         assert resp.status_code == 201
@@ -362,7 +362,7 @@ class TestStudentBatchAPI:
 
         client.post(
             "/api/admin/students",
-            json={"names": "张三,李四"},
+            json={"names": "张三，李四"},
             headers=headers,
         )
 
@@ -378,7 +378,7 @@ class TestStudentBatchAPI:
 
         resp = client.post(
             "/api/admin/students",
-            json={"names": "张三,张三,李四,张三"},
+            json={"names": "张三，张三，李四，张三"},
             headers=headers,
         )
         assert resp.status_code == 201
@@ -417,7 +417,7 @@ class TestStudentBatchAPI:
 
         resp = client.post(
             "/api/admin/students",
-            json={"names": "   ,   ,   "},
+            json={"names": "   ，   ，   "},
             headers=headers,
         )
         assert resp.status_code == 400

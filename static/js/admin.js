@@ -844,7 +844,7 @@ async function saveImageTags() {
 // ==========================================================================
 async function addStudents() {
     const input = document.getElementById('student-names-input');
-    const names = input.value.trim();
+    const names = input.value.trim().replace(/,/g, '，');  // 容错：将半角逗号归一化为全角
     if (!names) {
         showToast('请输入学生姓名', 'error');
         return;

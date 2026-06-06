@@ -15,9 +15,9 @@ from pydantic import BaseModel, ConfigDict
 
 
 class StudentCreate(BaseModel):
-    """创建学生请求 — V2.0 统一接受逗号分隔姓名。
+    """创建学生请求 — V3.0 统一接受中文全角逗号分隔姓名。
 
-    Example: {"names": "张三"} 或 {"names": "张三,李四,王五"}
+    Example: {"names": "张三"} 或 {"names": "张三，李四，王五"}
     """
 
     names: str
