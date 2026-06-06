@@ -1,4 +1,4 @@
-# 技术架构深度解析 — 毕业季专属相册 V2.0
+# 技术架构深度解析 — 毕业季专属相册 V3.0
 
 > 面向开发者、架构师及后续维护者的技术决策文档。
 
@@ -113,33 +113,55 @@
 
 ### 方案
 
-使用阿里云 OSS `x-oss-process` 图片处理能力，前端自主拼接缩略图 URL。
+使用阿里云 OSS `x-oss-process` 图片处理能力，后端生成签名缩略图 URL。
 
-**实现** (`static/js/student.js`):
+**实现** (`app/services/aliyun_oss_storage.py`):
 
-```javascript
-function thumbnailUrl(url) {
-    // 前端自行拼接 OSS 图片处理参数
-    // 后端不感知缩略图逻辑
-    return url + '&x-oss-process=image/resize,m_lfit,w_400,h_400';
-}
+```python
+async def get_thumbnail_signed_url(
+    self, file_key: str, width: int = 400, height: int = 400,
+    expires_seconds: int = 900,
+) -> str:
+    process_value = f"image/resize,m_lfit,w_{width},h_{height}"
+    url: str = await asyncio.to_thread(
+        self._bucket.sign_url,
+        "GET",
+        file_key,
+        expires_seconds,
+        params={"x-oss-process": process_value},  # 关键字参数，参与签名
+    )
+    return url
 ```
 
-**为什么前端拼接而非后端返回？**
+**V3.0 根因修复 (Phase 17/19)**:
 
-| 维度 | 后端返回 | 前端拼接 |
+`oss2.Bucket.sign_url(method, key, expires, headers=None, params=None, ...)` 的真实签名为 5 参数形式，`params` 是第 5 个位置参数。初版实现将 `x-oss-process` 作为第 4 个位置参数传入，被 SDK 识别为 `headers` 而非 `params`：
+- `x-oss-process` 被纳入签名计算（作为 CanonicalizedHeaders）
+- 但未追加到 URL Query String → 浏览器请求签名不匹配 → 403
+
+修复后使用 `params=` **关键字参数**，确保：
+- OSS SDK 将 `x-oss-process` 正确追加到 URL 查询字符串
+- 签名计算覆盖该参数，服务端验证通过
+
+**为什么后端生成而非前端拼接？**
+
+| 维度 | 前端拼接 (V2.0) | 后端签名 (V3.0) |
 |---|---|---|
-| 后端代码 | 需新增 thumbnail_url 字段或接口 | 零改动 |
-| 响应体积 | API JSON 增加 ~100 字符/图 | 不变 |
-| 灵活性 | 改尺寸需部署后端 | 纯前端配置 |
-| OSS 处理 | 无差异（均通过 OSS 实时处理） | 无差异 |
+| 安全性 | 签名不覆盖 process 参数 → 403 | 签名覆盖所有参数 → 200 |
+| API 响应体积 | 不变 | 新增 `thumbnail_url` 字段 (~150 字符/图) |
+| 灵活性 | 前端自由调整 | 需后端配合 |
+
+**应用范围 (V3.0)**:
+- 学生端图片网格：`thumbnail_url`（400px）
+- 管理端打标工作台：`thumbnail_url`（400px）
+- 管理端图片管理：`thumbnail_url`（400px）
+- 管理端编辑弹窗预览：`thumbnail_url`（400px）
+- Lightbox 全屏预览：原图 `url`
 
 **OSS 处理流程**:
-1. 浏览器请求带 `x-oss-process` 参数的 URL
+1. 浏览器请求带 `x-oss-process` 参数的签名 URL
 2. OSS 在 Edge 节点实时缩放图片（首次 < 100ms，后续缓存命中 < 10ms）
 3. 返回缩放后的图片数据
-
-**注意**: `x-oss-process` 参数需要拼接在签名 URL 的 querystring 之后，不能破坏已有的签名参数。
 
 ---
 
@@ -271,19 +293,20 @@ async function startDownload() {
      /api/admin/*               /api/student/*
 ```
 
-### V2.0 关键端点
+### 关键端点
 
-| 方法 | 路径 | 说明 | V2.0 新增 |
-|---|---|---|---|
-| POST | `/api/admin/students` | 批量创建学生（names 字段含逗号分隔姓名） | ✅ |
-| POST | `/api/admin/tag-groups` | 创建标签分组 | ✅ |
-| PUT | `/api/admin/tag-groups/{id}` | 重命名分组 | ✅ |
-| DELETE | `/api/admin/tag-groups/{id}` | 删除分组（标签迁移至"未分类"） | ✅ |
-| PUT | `/api/admin/tags/{id}` | 移动标签到其他分组 | ✅ |
-| DELETE | `/api/admin/tags/{id}` | 删除标签 | 已有 |
-| PUT | `/api/admin/images/{id}/tags` | 图片标签替换（替换全部 tag_ids） | ✅ |
-| GET | `/api/admin/images?tagged=true` | 按打标状态筛选图片 | ✅ |
-| GET | `/api/student/images` | 按学生姓名匹配标签查询图片 | 已有 |
+| 方法 | 路径 | 说明 | V2.0 | V3.0 |
+|---|---|---|---|---|
+| POST | `/api/admin/students` | 批量创建学生（全角逗号分隔姓名） | ✅ | |
+| POST | `/api/admin/tag-groups` | 创建标签分组 | ✅ | |
+| PUT | `/api/admin/tag-groups/{id}` | 重命名分组 | ✅ | |
+| DELETE | `/api/admin/tag-groups/{id}` | 删除分组（标签迁移至"未分类"） | ✅ | |
+| PUT | `/api/admin/tags/{id}` | 移动标签到其他分组 | ✅ | |
+| DELETE | `/api/admin/tags/{id}` | 删除标签 | 已有 | |
+| PUT | `/api/admin/images/{id}/tags` | 图片标签替换（替换全部 tag_ids） | ✅ | |
+| GET | `/api/admin/images?tagged=true` | 按打标状态筛选图片 | ✅ | |
+| DELETE | `/api/admin/images/batch` | 批量删除图片（多选模式） | | ✅ |
+| GET | `/api/student/images` | 按学生姓名匹配标签查询图片 | 已有 | |
 
 ---
 
@@ -294,21 +317,24 @@ async function startDownload() {
 **设计模式**: State-Driven Rendering（状态驱动渲染）
 
 ```
-                ┌─────────────────────┐
-                │     state 对象       │  (唯一数据源)
-                │                     │
-                │  allImages          │
-                │  unprocessed        │
-                │  processed          │
-                │  currentImageId     │
-                │  tagGroups          │
-                │  students           │
-                │  processingLock     │
-                │  editingImageId     │
-                └────────┬────────────┘
+                ┌─────────────────────────┐
+                │     state 对象            │  (唯一数据源)
+                │                          │
+                │  allImages               │
+                │  unprocessed             │
+                │  processed               │
+                │  currentImageId          │
+                │  tagGroups               │
+                │  students                │
+                │  processingLock          │
+                │  selectedTagIds   ← V3.0 │
+                │  editingImageId          │
+                │  isMultiSelectMode ← V3.0│
+                │  selectedImageIds  ← V3.0│
+                └────────┬─────────────────┘
                          │
-            ┌────────────┼────────────┐
-            ▼            ▼            ▼
+            ┌────────────┼───────────────┐
+            ▼            ▼               ▼
       renderWorkspace  renderTagGroups  renderStudents
       renderProcessed  renderAllImages  ...
 ```
@@ -317,6 +343,8 @@ async function startDownload() {
 - **事件委托**: 容器级事件监听 (e.g., `#unprocessed-grid`)，避免重新绑定
 - **processingLock**: 打标操作防抖，防止并发 API 调用导致状态混乱
 - **自动分流**: `allImages → unprocessed (tags=[]) + processed (tags>0)`
+- **V3.0 多标签模式**: `selectedTagIds` 批量选中 → confirm 一次性提交 → 自动推进
+- **V3.0 图片批量删除**: `isMultiSelectMode` + `selectedImageIds` → 批量 DELETE 端点 → 退出多选
 
 ### 学生端 (`student.js`)
 
@@ -335,17 +363,21 @@ async function startDownload() {
 
 | 测试文件 | 用例数 | 覆盖内容 |
 |---|---|---|
-| `test_admin_api.py` | ~55 | 管理端 CRUD、认证、图片上传/删除 |
+| `test_admin_api.py` | 16 | 管理端 CRUD、认证、图片上传/删除 |
 | `test_student_api.py` | ~19 | 学生端认证、隐私隔离、图片查看 |
-| `test_v2_admin_api.py` | 24 | V2.0 新增：TagGroup CRUD、批量学生、图片标签替换、tagged 筛选、标签移动 |
+| `test_v2_admin_api.py` | 30 | V2.0/V3.0：TagGroup CRUD、批量学生、图片标签替换、tagged 筛选、标签移动、批量删除 |
+| `test_storage.py` | 12 | OSS 上传/签名/删除/缩略图单元测试 |
+| `test_tag_group.py` | 13 | 模型 + 迁移验证 |
+| `test_auth.py` / `test_tagging.py` | ~18 | 认证 + 打标服务 |
 
-**总计: 98 测试用例**
+**总计: 108 测试用例**
 
 ### 测试基础设施
 
 - **数据库**: SQLite 内存模式 (`StaticPool`, `check_same_thread=False`)，每个测试独立隔离
-- **OSS Mock**: 测试环境通过 `OSS_ENDPOINT=""` 跳过真实 OSS 调用
+- **OSS Mock**: `AsyncMock(spec=AliyunOssStorageService)`，测试环境绝不发起真实网络请求
 - **迁移测试**: `test_migration_idempotent` 验证幂等性, `test_migration_preserves_*` 验证数据完整性
+- **Batch delete 测试**: 覆盖空列表/不存在/部分不存在/成功/全量/未认证 6 种场景
 
 ### 运行测试
 
@@ -353,7 +385,7 @@ async function startDownload() {
 # 全量测试
 pytest tests/ -v
 
-# 仅 V2.0 测试
+# 仅 V2.0/V3.0 测试
 pytest tests/test_v2_admin_api.py -v
 
 # 带覆盖率
@@ -362,4 +394,4 @@ pytest tests/ -v --cov=app --cov-report=term-missing
 
 ---
 
-*最后更新: 2026-06-04 · V2.0 正式版*
+*最后更新: 2026-06-06 · V3.0 正式版*

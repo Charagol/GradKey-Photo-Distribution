@@ -433,20 +433,21 @@ class ITaggingService(ABC):
 
 | 指标 | 数值 |
 |---|---|
-| 总 Phase 数 | 20 |
-| 后端代码 (Python) | ~1600 行 |
-| 前端代码 (HTML + JS) | ~2400 行 |
-| 测试用例 | 102 (全量通过) |
+| 总 Phase 数 | 22 |
+| 后端代码 (Python) | ~2000 行 |
+| 前端代码 (HTML + JS) | ~2000 行 |
+| 测试用例 | 108 (全量通过) |
 | 数据模型 | 6 个表 |
-| API 端点 | 20+ |
+| API 端点 | 22+ |
 
 ### 架构亮点
 
 1. **SSOT 隐私隔离**: `Student.name = Tag.name` 逻辑匹配，零外键耦合，天然支持合影语义
 2. **沉浸式打标工作台**: 状态驱动渲染 + 事件委托 + processingLock 防抖，V3.0 新增多标签 toggle + 确认按钮模式，完整支持合影语义
 3. **前端队列下载**: Blob fetch + 400ms 间隔 + 可取消标志位，绕过浏览器批量下载拦截
-4. **OSS 动静分离**: 数据库仅存 File Key，签名 URL 动态生成，V3.0 修复 x-oss-process 参与签名确保缩略图正确加载
-5. **零构建步骤**: Vanilla JS + Tailwind CDN，无 npm/webpack，解压即用
+4. **OSS 动静分离 + 缩略图签名修复 (V3.0)**: 数据库仅存 File Key，签名 URL 动态生成；Phase 17/19 根因修复 `sign_url` 传参 — `x-oss-process` 以关键字 `params=` 传入 SDK，确保 OSS 签名计算包含参数，全链路 403 终结
+5. **图片管理批量删除 (V3.0)**: 多选模式 + 事件委托 + 批量 DELETE 端点，卡片叠加 indigo 选中态，切换 Tab 自动重置
+6. **零构建步骤**: Vanilla JS + Tailwind CDN，无 npm/webpack，解压即用
 
 ### 技术债务与未来方向
 
@@ -456,4 +457,4 @@ class ITaggingService(ABC):
 
 ---
 
-*最后更新: 2026-06-06 | V3.0 Phase 22 · 图片管理多选批量删除*
+*最后更新: 2026-06-06 | V3.0 文档收尾*
