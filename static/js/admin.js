@@ -33,6 +33,7 @@ const state = {
     // UI
     processedFilter: 'all',  // 'all' | 'tagged' | 'untagged'
     processingLock: false,   // prevent concurrent applyTag calls
+    selectedTagIds: [],      // workspace tag selection (multi-select before confirm)
     editingImageId: null,    // image being edited in modal
     modalTagIds: [],         // temp tag IDs in edit modal
 };
@@ -228,7 +229,14 @@ function bindEvents() {
     document.getElementById('tag-pool').addEventListener('click', (e) => {
         const chip = e.target.closest('.tag-chip');
         if (!chip || state.processingLock) return;
-        applyTag(Number(chip.dataset.tagId));
+        toggleTagSelection(Number(chip.dataset.tagId));  // V3.0: multi-select toggle
+    });
+
+    // V3.0: confirm button (rendered dynamically in #confirm-tags-area)
+    document.getElementById('confirm-tags-area').addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-action="confirm-tags"]');
+        if (!btn || btn.disabled || state.processingLock) return;
+        confirmTags();
     });
 
     document.getElementById('processed-grid').addEventListener('click', (e) => {
@@ -413,6 +421,7 @@ async function loadAllImages() {
 // Image Splitting
 // ==========================================================================
 function splitImages() {
+    state.selectedTagIds = [];  // V3.0: reset tag selection on data reload
     state.unprocessed = state.allImages.filter(img => !img.tags || img.tags.length === 0);
     state.processed = state.allImages
         .filter(img => img.tags && img.tags.length > 0)
@@ -496,14 +505,17 @@ function renderTagPool() {
                     <span class="text-xs text-gray-400">${tags.length} 个标签</span>
                 </div>
                 <div class="flex flex-wrap gap-2">
-                    ${tags.map(tag => `
-                        <button class="tag-chip inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium transition-all
-                                       bg-gray-50 text-gray-700 border border-gray-200
-                                       hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-300 active:scale-95"
+                    ${tags.map(tag => {
+                        const isSel = state.selectedTagIds.includes(tag.id);
+                        const chipClass = isSel
+                            ? 'tag-chip inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium transition-all bg-indigo-100 text-indigo-700 border-2 border-indigo-400 ring-1 ring-indigo-300'
+                            : 'tag-chip inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium transition-all bg-gray-50 text-gray-700 border border-gray-200 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-300 active:scale-95';
+                        return `
+                        <button class="${chipClass}"
                                 data-tag-id="${tag.id}">
                             ${escapeHtml(tag.name)}
-                        </button>
-                    `).join('')}
+                        </button>`;
+                    }).join('')}
                     ${tags.length === 0 ? '<span class="text-xs text-gray-400">暂无标签</span>' : ''}
                 </div>
             </div>`;
@@ -557,6 +569,92 @@ async function applyTag(tagId) {
         renderWorkspace();
         renderProcessedGrid();
         showToast(`已为图片添加标签「${tagName}」`, 'success');
+    } catch (err) {
+        showToast(err.message, 'error');
+    } finally {
+        state.processingLock = false;
+    }
+}
+
+// ==========================================================================
+// V3.0: Multi-Select Tag Toggle + Confirm (replaces single-click applyTag)
+// ==========================================================================
+
+function toggleTagSelection(tagId) {
+    if (state.processingLock) return;
+
+    const idx = state.selectedTagIds.indexOf(tagId);
+    if (idx === -1) {
+        state.selectedTagIds.push(tagId);
+    } else {
+        state.selectedTagIds.splice(idx, 1);
+    }
+
+    renderTagPool();
+    renderConfirmButton();
+}
+
+function renderConfirmButton() {
+    const container = document.getElementById('confirm-tags-area');
+    if (!container) return;
+
+    const count = state.selectedTagIds.length;
+
+    if (count === 0) {
+        container.innerHTML = `
+            <button class="w-full px-4 py-3 rounded-lg text-sm font-medium
+                           bg-gray-200 text-gray-400 cursor-not-allowed transition-all"
+                    disabled
+                    data-action="confirm-tags">
+                请选择标签后确认
+            </button>`;
+    } else {
+        container.innerHTML = `
+            <button class="w-full px-4 py-3 rounded-lg text-sm font-medium
+                           bg-indigo-600 text-white hover:bg-indigo-700
+                           active:scale-[0.98] transition-all cursor-pointer"
+                    data-action="confirm-tags">
+                确认标签 (${count} 个)
+            </button>`;
+    }
+}
+
+async function confirmTags() {
+    if (state.processingLock) return;
+    if (!state.currentImageId) return;
+    if (state.selectedTagIds.length === 0) return;
+
+    const image = state.allImages.find(img => img.id === state.currentImageId);
+    if (!image) return;
+
+    const existingIds = (image.tags || []).map(t => t.id);
+    const merged = [...existingIds, ...state.selectedTagIds];
+    const uniqueIds = [...new Set(merged)];
+
+    state.processingLock = true;
+
+    try {
+        await apiPut(`/api/admin/images/${image.id}/tags`, { tag_ids: uniqueIds });
+
+        image.tags = uniqueIds.map(id => ({ id, name: findTagName(id), group_id: findTagGroupId(id) }));
+
+        const idx = state.unprocessed.findIndex(img => img.id === image.id);
+        if (idx !== -1) {
+            state.unprocessed.splice(idx, 1);
+            state.processed.unshift(image);
+        }
+
+        state.selectedTagIds = [];
+
+        if (state.unprocessed.length > 0) {
+            state.currentImageId = state.unprocessed[0].id;
+        } else {
+            state.currentImageId = null;
+        }
+
+        renderWorkspace();
+        renderProcessedGrid();
+        showToast(`已为图片添加 ${uniqueIds.length} 个标签`, 'success');
     } catch (err) {
         showToast(err.message, 'error');
     } finally {
@@ -1097,5 +1195,8 @@ async function updatePassword() {
         statusEl.textContent = err.message;
         statusEl.className = 'text-sm text-red-500 mt-3';
         statusEl.classList.remove('hidden');
+    }
+}
+}
     }
 }
