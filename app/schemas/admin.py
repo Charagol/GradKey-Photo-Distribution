@@ -125,3 +125,9 @@ class ImageListResponse(BaseModel):
 
     images: list[ImageResponse]
     total: int
+
+
+class ImageBatchDeleteRequest(BaseModel):
+    """批量删除图片请求 — V3.0 Phase 22。"""
+
+    image_ids: list[int]

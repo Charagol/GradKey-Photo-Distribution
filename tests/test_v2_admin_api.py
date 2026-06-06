@@ -605,3 +605,88 @@ class TestTagMoveBetweenGroups:
             headers=self.headers,
         )
         assert resp.status_code == 400
+
+
+# ============================================================================
+# Image Batch Delete Tests (V3.0 Phase 22)
+# ============================================================================
+
+
+class TestImageBatchDelete:
+    """批量删除图片接口测试。"""
+
+    @pytest.fixture(autouse=True)
+    def _setup(self, client):
+        self.headers = _admin_auth(client)
+        self.client = client
+
+        # 上传三张测试图片
+        self.img1 = _upload_image(client, self.headers, "batch1.jpg", None)
+        self.img2 = _upload_image(client, self.headers, "batch2.jpg", None)
+        self.img3 = _upload_image(client, self.headers, "batch3.jpg", None)
+
+    def test_batch_delete_empty_ids_400(self, client):
+        """空 image_ids → 400。"""
+        resp = client.request(
+            "DELETE", "/api/admin/images/batch",
+            json={"image_ids": []},
+            headers=self.headers,
+        )
+        assert resp.status_code == 400
+
+    def test_batch_delete_not_found_404(self, client):
+        """不存在的图片 ID → 404。"""
+        resp = client.request(
+            "DELETE", "/api/admin/images/batch",
+            json={"image_ids": [99999]},
+            headers=self.headers,
+        )
+        assert resp.status_code == 404
+
+    def test_batch_delete_partial_not_found_404(self, client):
+        """部分 ID 存在部分不存在 → 404。"""
+        resp = client.request(
+            "DELETE", "/api/admin/images/batch",
+            json={"image_ids": [self.img1["id"], 99999]},
+            headers=self.headers,
+        )
+        assert resp.status_code == 404
+
+    def test_batch_delete_success_204(self, client):
+        """正常批量删除 → 204，所有图片被删除。"""
+        ids = [self.img1["id"], self.img2["id"]]
+        resp = client.request(
+            "DELETE", "/api/admin/images/batch",
+            json={"image_ids": ids},
+            headers=self.headers,
+        )
+        assert resp.status_code == 204
+
+        # 验证图片已被删除
+        resp = client.get("/api/admin/images", headers=self.headers)
+        data = resp.json()
+        remaining_ids = {img["id"] for img in data["images"]}
+        assert self.img1["id"] not in remaining_ids
+        assert self.img2["id"] not in remaining_ids
+        assert self.img3["id"] in remaining_ids
+
+    def test_batch_delete_all_204(self, client):
+        """全部删除 → 204，所有图片被清除。"""
+        ids = [self.img1["id"], self.img2["id"], self.img3["id"]]
+        resp = client.request(
+            "DELETE", "/api/admin/images/batch",
+            json={"image_ids": ids},
+            headers=self.headers,
+        )
+        assert resp.status_code == 204
+
+        resp = client.get("/api/admin/images", headers=self.headers)
+        assert resp.json()["total"] == 0
+
+    def test_batch_delete_unauthorized(self, client):
+        """无认证 → 401。"""
+        resp = client.request(
+            "DELETE", "/api/admin/images/batch",
+            json={"image_ids": [self.img1["id"]]},
+        )
+        assert resp.status_code == 401

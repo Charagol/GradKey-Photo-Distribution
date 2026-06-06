@@ -389,6 +389,43 @@ class ITaggingService(ABC):
 - [x] **验证**: 102/102 全量测试通过（纯前端改动，无后端影响）
 
 ---
+### Phase 22: 图片管理多选批量删除
+
+**背景**: Phase 21 已预留 `isMultiSelectMode` 状态，本 Phase 实现完整的多选批量删除功能。
+
+#### 后端
+
+- [x] Schema `ImageBatchDeleteRequest(image_ids: list[int])` — 批量删除请求体
+- [x] `DELETE /api/admin/images/batch` 端点 → 204
+    - 空列表 → 400
+    - 部分/全部不存在 → 404
+    - 事务包裹：DB 操作 all-or-nothing，OSS 删除 best-effort
+- [x] **路由顺序修复**: `/images/batch` 必须在 `/images/{image_id}` 之前注册，否则 FastAPI 将 "batch" 匹配为 path param
+
+#### 前端 HTML
+
+- [x] 上传卡片与图片网格之间新增 `#image-multi-select-bar` 容器
+    - 未激活时仅显示「开启多选」按钮
+    - 激活后显示全选/取消全选/计数/删除选中/取消 操作栏
+
+#### 前端 JS
+
+- [x] `state` 新增 `selectedImageIds: Set` — 选中的图片 ID 集合
+- [x] `renderImageMultiSelectBar()` — 根据 `isMultiSelectMode` 状态渲染操作栏
+- [x] `toggleMultiSelectMode()` — 进入/退出多选模式，重置选中集
+- [x] `selectAllImages()` / `deselectAllImages()` — 全选/取消全选
+- [x] `batchDeleteSelected()` — confirm 确认 → DELETE API → reload + 退出多选
+- [x] `renderAllImages()` — 多选模式下 card 叠加 indigo ring + 勾选徽章，`data-image-id` 属性
+- [x] `switchTab()` — 离开图片 Tab 时重置 `isMultiSelectMode` + `selectedImageIds`
+- [x] `bindEvents()` — `#image-manage-grid` 事件委托（card 点击选/取消选 + 删除按钮），`#image-multi-select-bar-inner` 事件委托（`data-action` 按钮）
+- [x] 移除 `renderAllImages()` 中旧的独立 `.delete-image-btn` 逐个绑定，统一改为事件委托
+
+#### 测试覆盖
+
+- [x] `TestImageBatchDelete` 6 个用例（空列表/不存在/部分不存在/成功/全部/未认证）
+- [x] **验证**: 59/59 全量测试通过（新增 6 用例 + 原有 53 保持通过）
+
+---
 
 ## 项目总结
 
@@ -419,4 +456,4 @@ class ITaggingService(ABC):
 
 ---
 
-*最后更新: 2026-06-06 | V3.0 Phase 21 · 管理端 UI 优化三项*
+*最后更新: 2026-06-06 | V3.0 Phase 22 · 图片管理多选批量删除*

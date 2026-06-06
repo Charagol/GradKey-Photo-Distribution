@@ -17,6 +17,7 @@ from app.models.image import Image
 from app.models.tag import Tag
 from app.models.tag_group import DEFAULT_TAG_GROUP_NAME, TagGroup
 from app.schemas.admin import (
+    ImageBatchDeleteRequest,
     ImageListResponse,
     ImageResponse,
     ImageTagUpdate,
@@ -393,6 +394,42 @@ async def upload_images_view(
         )
 
     return ImageListResponse(images=result, total=len(result))
+
+
+@router.delete("/images/batch", status_code=204)
+async def batch_delete_images_view(
+    body: ImageBatchDeleteRequest,
+    db: Session = Depends(get_db),
+    storage: AliyunOssStorageService = Depends(get_storage_service),
+):
+    """批量删除图片 — V3.0 Phase 22。
+
+    事务包裹：所有 DB 操作在单一事务中，all-or-nothing。
+    OSS 删除 best-effort（单张失败不影响整体）。
+    """
+    if not body.image_ids:
+        raise HTTPException(status_code=400, detail="image_ids 不能为空")
+
+    # 验证所有 ID 存在
+    images = db.query(Image).filter(Image.id.in_(body.image_ids)).all()
+    found_ids = {img.id for img in images}
+    missing = set(body.image_ids) - found_ids
+    if missing:
+        raise HTTPException(
+            status_code=404,
+            detail=f"图片不存在: {sorted(missing)}",
+        )
+
+    # OSS 删除（best-effort）+ DB 删除
+    for img in images:
+        try:
+            await storage.delete(img.file_key)
+        except Exception:
+            logger.warning("OSS 批量删除失败 (file_key=%s)", img.file_key, exc_info=True)
+        db.delete(img)
+
+    db.commit()
+    return Response(status_code=204)
 
 
 @router.delete("/images/{image_id}", status_code=204)

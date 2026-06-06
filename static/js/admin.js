@@ -37,6 +37,7 @@ const state = {
     editingImageId: null,    // image being edited in modal
     modalTagIds: [],         // temp tag IDs in edit modal
     isMultiSelectMode: false,// Phase 21: image management multi-select mode
+    selectedImageIds: new Set(), // Phase 22: selected image IDs for batch delete
 };
 
 // ==========================================================================
@@ -306,6 +307,49 @@ function bindEvents() {
     // ── Image Upload ──
     document.getElementById('upload-btn').addEventListener('click', uploadImages);
 
+    // ── Image Management Grid (delegate: delete + multi-select) ──
+    document.getElementById('image-manage-grid').addEventListener('click', (e) => {
+        // In multi-select mode, card click toggles selection
+        if (state.isMultiSelectMode) {
+            const card = e.target.closest('.image-manage-card');
+            if (!card) return;
+            const id = Number(card.dataset.imageId);
+            if (state.selectedImageIds.has(id)) {
+                state.selectedImageIds.delete(id);
+            } else {
+                state.selectedImageIds.add(id);
+            }
+            renderImageMultiSelectBar();
+            renderAllImages();
+            return;
+        }
+
+        // Normal mode: single delete
+        const delBtn = e.target.closest('.delete-image-btn');
+        if (!delBtn) return;
+        const id = Number(delBtn.dataset.id);
+        const name = delBtn.dataset.name;
+        if (confirm(`确定删除图片「${name}」吗？`)) {
+            apiDelete(`/api/admin/images/${id}`).then(() => {
+                showToast('图片已删除', 'success');
+                loadImages().then(() => renderAllImages());
+            }).catch(err => showToast(err.message, 'error'));
+        }
+    });
+
+    // ── Image Multi-Select Bar (delegate) ──
+    document.getElementById('image-multi-select-bar-inner').addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-action]');
+        if (!btn) return;
+        switch (btn.dataset.action) {
+            case 'toggle-multi-select': toggleMultiSelectMode(); break;
+            case 'select-all': selectAllImages(); break;
+            case 'deselect-all': deselectAllImages(); break;
+            case 'delete-selected': batchDeleteSelected(); break;
+            case 'cancel-multi-select': toggleMultiSelectMode(); break;
+        }
+    });
+
     // ── Settings ──
     document.getElementById('update-password-btn').addEventListener('click', updatePassword);
     document.getElementById('confirm-password').addEventListener('keydown', (e) => {
@@ -335,6 +379,12 @@ function bindEvents() {
 // Tab Switching
 // ==========================================================================
 function switchTab(name) {
+    // Phase 22: reset multi-select state when leaving images tab
+    if (state.currentTab === 'images' && name !== 'images') {
+        state.isMultiSelectMode = false;
+        state.selectedImageIds = new Set();
+    }
+
     state.currentTab = name;
 
     // Update sidebar buttons
@@ -361,7 +411,7 @@ function switchTab(name) {
     } else if (name === 'tag-groups') {
         loadTagGroups().catch(err => showToast(err.message, 'error'));
     } else if (name === 'images') {
-        loadAllImages();
+        loadAllImages().then(() => renderImageMultiSelectBar());
     }
 }
 
@@ -1099,6 +1149,101 @@ async function uploadImages() {
     }
 }
 
+// ==========================================================================
+// Image Management Multi-Select (V3.0 Phase 22)
+// ==========================================================================
+
+function renderImageMultiSelectBar() {
+    const bar = document.getElementById('image-multi-select-bar');
+    const inner = document.getElementById('image-multi-select-bar-inner');
+    if (!bar || !inner) return;
+
+    if (state.currentTab !== 'images') {
+        bar.classList.add('hidden');
+        return;
+    }
+
+    if (state.allImages.length === 0) {
+        bar.classList.add('hidden');
+        return;
+    }
+    bar.classList.remove('hidden');
+
+    if (!state.isMultiSelectMode) {
+        inner.innerHTML = `
+            <button class="text-sm text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 px-3 py-1.5 rounded-lg transition-colors font-medium"
+                    data-action="toggle-multi-select">
+                开启多选
+            </button>`;
+    } else {
+        const count = state.selectedImageIds.size;
+        inner.innerHTML = `
+            <button class="text-sm text-indigo-600 hover:text-indigo-700 px-2 py-1 rounded transition-colors font-medium"
+                    data-action="select-all">全选</button>
+            <span class="text-gray-300 text-sm">|</span>
+            <button class="text-sm text-gray-500 hover:text-gray-700 px-2 py-1 rounded transition-colors"
+                    data-action="deselect-all">取消全选</button>
+            <span class="text-sm text-gray-600 font-medium ml-1">已选 ${count} 张</span>
+            <div class="flex-1"></div>
+            <button class="text-sm bg-red-600 text-white px-4 py-1.5 rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-red-700"
+                    data-action="delete-selected"
+                    ${count === 0 ? 'disabled' : ''}>
+                删除选中${count > 0 ? ` (${count})` : ''}
+            </button>
+            <button class="text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 px-3 py-1.5 rounded-lg transition-colors"
+                    data-action="cancel-multi-select">取消</button>`;
+    }
+}
+
+function toggleMultiSelectMode() {
+    state.isMultiSelectMode = !state.isMultiSelectMode;
+
+    if (state.isMultiSelectMode) {
+        state.selectedImageIds = new Set();
+    } else {
+        state.selectedImageIds = new Set();
+    }
+
+    renderImageMultiSelectBar();
+    renderAllImages();
+}
+
+function selectAllImages() {
+    state.allImages.forEach(img => state.selectedImageIds.add(img.id));
+    renderImageMultiSelectBar();
+    renderAllImages();
+}
+
+function deselectAllImages() {
+    state.selectedImageIds = new Set();
+    renderImageMultiSelectBar();
+    renderAllImages();
+}
+
+async function batchDeleteSelected() {
+    if (state.selectedImageIds.size === 0) return;
+    const ids = [...state.selectedImageIds];
+
+    if (!confirm(`即将删除 ${ids.length} 张图片，此操作不可撤销，确认？`)) return;
+
+    try {
+        await fetchAPI('/api/admin/images/batch', {
+            method: 'DELETE',
+            body: JSON.stringify({ image_ids: ids }),
+        });
+        showToast(`成功删除 ${ids.length} 张图片`, 'success');
+
+        // Exit multi-select and reload
+        state.isMultiSelectMode = false;
+        state.selectedImageIds = new Set();
+        await loadImages();
+        renderImageMultiSelectBar();
+        renderAllImages();
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
+}
+
 function renderAllImages() {
     const grid = document.getElementById('image-manage-grid');
     const empty = document.getElementById('images-manage-empty');
@@ -1110,13 +1255,23 @@ function renderAllImages() {
     }
 
     empty.classList.add('hidden');
-    grid.innerHTML = state.allImages.map(img => `
-        <div class="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-            <div class="aspect-[4/3] bg-gray-100">
+    grid.innerHTML = state.allImages.map(img => {
+        const isSelected = state.selectedImageIds.has(img.id);
+        const selectedRing = state.isMultiSelectMode && isSelected ? 'ring-2 ring-indigo-500' : '';
+        return `
+        <div class="image-manage-card bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow ${selectedRing} ${state.isMultiSelectMode ? 'cursor-pointer' : ''}"
+             data-image-id="${img.id}">
+            <div class="aspect-[4/3] bg-gray-100 relative">
                 <img src="${escapeHtml(img.thumbnail_url || img.url)}" alt="${escapeHtml(img.file_name || '')}"
                      class="w-full h-full object-cover"
                      loading="lazy"
                      onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 30%22%3E%3Crect fill=%22%23f3f4f6%22 width=%2240%22 height=%2230%22/%3E%3Ctext x=%2220%22 y=%2217%22 text-anchor=%22middle%22 fill=%22%239ca3af%22 font-size=%226%22%3E🖼%3C/text%3E%3C/svg%3E'">
+                <!-- Multi-select overlay -->
+                <div class="image-select-overlay absolute inset-0 ${state.isMultiSelectMode && isSelected ? 'flex' : 'hidden'} items-center justify-center bg-indigo-500/30 pointer-events-none">
+                    <div class="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center shadow-lg">
+                        <span class="text-white text-sm font-bold">✓</span>
+                    </div>
+                </div>
             </div>
             <div class="p-2">
                 <p class="text-xs text-gray-600 truncate mb-1">${escapeHtml(img.file_name || 'untitled')}</p>
@@ -1131,26 +1286,7 @@ function renderAllImages() {
                 </button>
             </div>
         </div>
-    `).join('');
-
-    // Bind delete buttons (event delegation on grid)
-    grid.querySelectorAll('.delete-image-btn').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-            e.stopPropagation();
-            const id = Number(btn.dataset.id);
-            const name = btn.dataset.name;
-            if (confirm(`确定删除图片「${name}」吗？`)) {
-                try {
-                    await apiDelete(`/api/admin/images/${id}`);
-                    showToast('图片已删除', 'success');
-                    await loadImages();
-                    renderAllImages();
-                } catch (err) {
-                    showToast(err.message, 'error');
-                }
-            }
-        });
-    });
+    `}).join('');
 }
 
 // ==========================================================================
