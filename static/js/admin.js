@@ -36,6 +36,7 @@ const state = {
     selectedTagIds: [],      // workspace tag selection (multi-select before confirm)
     editingImageId: null,    // image being edited in modal
     modalTagIds: [],         // temp tag IDs in edit modal
+    isMultiSelectMode: false,// Phase 21: image management multi-select mode
 };
 
 // ==========================================================================
@@ -747,7 +748,7 @@ function openEditModal(imageId) {
     state.editingImageId = imageId;
     state.modalTagIds = (image.tags || []).map(t => t.id);
 
-    document.getElementById('modal-preview-img').src = image.url;
+    document.getElementById('modal-preview-img').src = image.thumbnail_url || image.url;  // V3.0: 优先缩略图
     renderModalCurrentTags();
     renderModalAvailableTags();
 
@@ -1064,7 +1065,6 @@ async function deleteTagWithConfirmation(tagId, tagName) {
 // ==========================================================================
 async function uploadImages() {
     const filesInput = document.getElementById('image-files');
-    const tagsInput = document.getElementById('image-tags');
     const statusEl = document.getElementById('upload-status');
 
     if (!filesInput.files || filesInput.files.length === 0) {
@@ -1077,14 +1077,6 @@ async function uploadImages() {
         formData.append('files', file);
     }
 
-    const tagNames = tagsInput.value
-        .split(/[,，\s]+/)
-        .map(s => s.trim())
-        .filter(Boolean);
-    if (tagNames.length > 0) {
-        formData.append('tags', JSON.stringify(tagNames));
-    }
-
     const uploadBtn = document.getElementById('upload-btn');
     uploadBtn.disabled = true;
     uploadBtn.textContent = '上传中...';
@@ -1095,7 +1087,6 @@ async function uploadImages() {
         const data = await apiPost('/api/admin/images', formData);
         showToast(`成功上传 ${data.images.length} 张图片`, 'success');
         filesInput.value = '';
-        tagsInput.value = '';
         statusEl.classList.add('hidden');
         await loadImages();
         renderAllImages();
@@ -1134,7 +1125,7 @@ function renderAllImages() {
                         <span class="bg-indigo-50 text-indigo-600 text-[10px] px-1.5 py-0.5 rounded">${escapeHtml(t.name)}</span>
                     `).join('')}
                 </div>
-                <button class="delete-image-btn w-full text-xs text-red-500 hover:text-red-700 hover:bg-red-50 py-1 rounded transition-colors"
+                <button class="delete-image-btn w-full text-xs text-red-500 hover:text-red-700 hover:bg-red-50 py-1 rounded transition-colors${state.isMultiSelectMode ? ' hidden' : ''}"
                         data-id="${img.id}" data-name="${escapeHtml(img.file_name || 'untitled')}">
                     删除
                 </button>
