@@ -363,6 +363,33 @@ class ITaggingService(ABC):
 
 ---
 
+### Phase 21: 管理端 UI 优化三项
+
+**背景**: 三个独立的小型 UI 优化，提升管理端交互体验。
+
+#### 任务 1: 编辑弹窗预览缩略图化
+
+- [x] `openEditModal()` 预览从 `image.url` 改为 `image.thumbnail_url || image.url`
+- [x] 与网格渲染保持一致，拖动到桌面得到缩略图而非原图
+
+#### 任务 2: 多选模式隐藏删除按钮
+
+- [x] `state` 新增 `isMultiSelectMode: false`
+- [x] `renderAllImages()` 删除按钮在 `isMultiSelectMode` 时添加 `hidden` class
+- [x] 为后续 Phase 22 多选功能做前置准备
+
+#### 任务 3: 移除遗留关联标签功能
+
+- [x] `admin.html`: 移除上传区"关联标签"label + `#image-tags` input
+- [x] `admin.js` `uploadImages()`: 移除 `tagsInput` 引用、标签解析、`tagsInput.value = ''` 重置
+- [x] V2.0 打标工作台已完全替代此功能
+
+#### 测试覆盖
+
+- [x] **验证**: 102/102 全量测试通过（纯前端改动，无后端影响）
+
+---
+
 ## 项目总结
 
 ### 开发规模
@@ -392,4 +419,4 @@ class ITaggingService(ABC):
 
 ---
 
-*最后更新: 2026-06-06 | V3.0 Phase 20 · 管理端缩略图加载启用*
+*最后更新: 2026-06-06 | V3.0 Phase 21 · 管理端 UI 优化三项*
