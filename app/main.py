@@ -1,7 +1,14 @@
 """FastAPI 应用入口 — 毕业季专属相册。
 
-架构：
-- 本地 SQLite 数据库
+V4.0 关键变更:
+- 登录态 localStorage 持久化 + JWT exp 校验
+- Lightbox w_1200 缩略图 + 批量打标 + 管理端仪表盘
+- 容错增强: 上传重试、断网提示、图片降级
+- 性能调优: 前端 TTL 缓存、SQLite WAL、Tailwind 本地化、DB 连接池
+- Docker 工程化 + 启动自动建表
+
+架构:
+- 本地 SQLite 数据库 (WAL 模式)
 - 阿里云 OSS 存储图片
 - JWT 管理员 + 学生双重认证
 - 基于 Tag 名称匹配的隐私隔离
@@ -22,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="毕业季专属相册",
-    version="2.0.0",
+    version="4.0.0",
     description="本地 FastAPI + 阿里云 OSS，动静分离，隐私隔离。",
 )
 

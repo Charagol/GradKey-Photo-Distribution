@@ -500,7 +500,7 @@ class ITaggingService(ABC):
 | 前端代码 (HTML + JS) | ~2000 行 |
 | 测试用例 | 113 (全量通过) |
 | 数据模型 | 6 个表 |
-| API 端点 | 24+ |
+| API 端点 | 26+ |
 
 ### 架构亮点
 
@@ -509,7 +509,9 @@ class ITaggingService(ABC):
 3. **前端队列下载**: Blob fetch + 400ms 间隔 + 可取消标志位，绕过浏览器批量下载拦截
 4. **OSS 动静分离 + 缩略图签名修复 (V3.0)**: 数据库仅存 File Key，签名 URL 动态生成；Phase 17/19 根因修复 `sign_url` 传参 — `x-oss-process` 以关键字 `params=` 传入 SDK，确保 OSS 签名计算包含参数，全链路 403 终结
 5. **图片管理批量删除 (V3.0)**: 多选模式 + 事件委托 + 批量 DELETE 端点，卡片叠加 indigo 选中态，切换 Tab 自动重置
-6. **零构建步骤**: Vanilla JS + Tailwind CDN，无 npm/webpack，解压即用
+6. **Docker 一键部署 (V4.0)**: `docker-compose up -d`，启动自动建表，零 pip install
+7. **前端 TTL 缓存 (V4.0)**: 30min 新鲜窗口，上传/删除后强制刷新，大幅减少 OSS 签名请求
+8. **WAL + 连接池 (V4.0)**: SQLite WAL 读写不互斥 + `pool_size=3, max_overflow=5, pool_pre_ping=True`
 
 ### 技术债务与未来方向
 
@@ -519,4 +521,4 @@ class ITaggingService(ABC):
 
 ---
 
-*最后更新: 2026-06-10 | V4.0 P9 完成*
+*最后更新: 2026-06-10 · V4.0 正式版*

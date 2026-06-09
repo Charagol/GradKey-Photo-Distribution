@@ -1,4 +1,4 @@
-# 毕业季专属相册 V3.0
+# 毕业季专属相册 V4.0
 
 > 为班级/年级毕业季打造的私有相册平台 —— 管理员沉浸式打标，学生按姓名隔离查看与下载。
 
@@ -50,6 +50,15 @@
 - 批量添加学生支持中文全角逗号分隔（`张三，李四`）
 - 标签删除显示受影响照片数确认对话框
 - 移除遗留上传区关联标签功能（打标工作台已完全替代）
+
+### V4.0 新增亮点
+- **登录持久化**: localStorage + JWT exp 校验，学生刷新不重登
+- **Lightbox 缩略图**: w_1200 缩略图承载，告别 3-10MB 原图加载
+- **批量打标**: 多选照片一键批量打标 + 点击分组全选组内标签
+- **仪表盘**: 管理端默认首页，存储概览 + 数据统计 + CSV 导出
+- **Docker 一键部署**: `docker-compose up -d`，启动自动建表
+- **性能调优**: 前端 TTL 缓存、SQLite WAL、Tailwind 本地化、DB 连接池
+- **容错增强**: 上传重试（指数退避）、断网提示 banner、图片加载降级
 
 ---
 
@@ -213,7 +222,7 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 | 数据库 | SQLite + SQLAlchemy 2.0 ORM |
 | 对象存储 | 阿里云 OSS (oss2 SDK) |
 | 认证 | JWT (python-jose) + bcrypt |
-| 前端 | Vanilla JS + Tailwind CSS CDN |
+| 前端 | Vanilla JS + Tailwind CSS（本地化） |
 | 测试 | pytest + httpx |
 
 详细技术架构说明见 [docs/technical-overview.md](docs/technical-overview.md)。
@@ -256,6 +265,9 @@ private-album/
 ├── tests/                   # pytest 测试 (108 用例)
 ├── docs/                    # 文档
 ├── requirements.txt
+├── Dockerfile                # V4.0 Docker 镜像
+├── docker-compose.yml        # V4.0 容器编排
+├── .dockerignore
 ├── .env.example
 └── README.md
 ```
