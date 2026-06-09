@@ -332,6 +332,38 @@ class ITaggingService(ABC):
 
 ---
 
+### Phase 26: V4.0 P5 — 管理端仪表盘 + CSV 导出
+
+**背景**: 管理后台无概览面板，管理员需逐一进入各 Tab 才能了解系统状态。V4.0 P5 新增仪表盘作为默认首页。
+
+#### 后端
+
+- [x] `DashboardStatsResponse` schema：`photo_count`、`student_count`、`tag_count`、`tag_group_count`、`storage_bytes`
+- [x] `GET /api/admin/dashboard/stats` — 聚合 Image/Student/Tag/TagGroup 计数 + `COALESCE(SUM(file_size),0)` 存储占用，不回源 OSS
+- [x] `GET /api/admin/students/export` — CSV 下载（`Content-Type: text/csv; charset=utf-8`），两列双引号包裹（`"姓名","密钥"`），无表头
+- [x] **路由顺序**：`/students/export` 在 `/students/{student_id}` 之前注册，防止 "export" 被匹配为 path param
+
+#### 前端
+
+- [x] `admin.html`：侧边栏顶部新增 `📊 仪表盘`（默认 active）+ `tab-dashboard` 面板
+  - 4 列 `grid-cols-4` 统计卡片（照片数/学生数/标签数/存储占用），圆角白底 + `hover:shadow-md`
+  - 底部「导出学生名单」按钮
+- [x] `admin.js`：
+  - `currentTab` 默认值 `'workspace'` → `'dashboard'`
+  - `loadDashboardData()` — fetch stats → `renderDashboard()`
+  - `renderDashboard(data)` — 填充卡片数值 + 存储单位人性化（< 1GB → MB，>= 1GB → GB，1 位小数）
+  - `exportStudents()` — fetch blob → `URL.createObjectURL` → 触发下载
+  - `switchTab('dashboard')` → `loadDashboardData()`（每次切换重新加载）
+  - 事件委托：`#export-students-btn` → `exportStudents()`
+
+#### 测试覆盖
+
+- [x] `TestDashboardStats` 2 用例：空库全 0（`tag_group_count >= 1` 含默认分组）、有数据时各计数值正确
+- [x] `TestStudentExportCsv` 3 用例：正常导出 Content-Type + CSV 格式、空列表、未认证 401
+- [x] 113/113 全量测试通过（原 108 + 新 5）
+
+---
+
 ## 项目总结
 
 ### 开发规模

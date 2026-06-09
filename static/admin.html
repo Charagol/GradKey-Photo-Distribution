@@ -76,7 +76,10 @@
       <!-- Sidebar -->
       <nav id="sidebar" class="w-56 bg-white border-r border-gray-200 flex flex-col flex-shrink-0">
         <div class="p-4 space-y-1">
-          <button class="nav-btn w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium transition-colors bg-indigo-50 text-indigo-700" data-tab="workspace">
+          <button class="nav-btn w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium transition-colors bg-indigo-50 text-indigo-700" data-tab="dashboard">
+            📊 仪表盘
+          </button>
+          <button class="nav-btn w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-gray-600 hover:bg-gray-50" data-tab="workspace">
             🎯 打标工作台
           </button>
           <button class="nav-btn w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-gray-600 hover:bg-gray-50" data-tab="students">
@@ -101,9 +104,49 @@
       <main id="main-content" class="flex-1 overflow-y-auto p-6">
 
         <!-- ============================================================ -->
+        <!-- Tab: Dashboard (仪表盘) — V4.0 P5                             -->
+        <!-- ============================================================ -->
+        <div id="tab-dashboard" class="tab-panel">
+          <h2 class="text-lg font-bold text-gray-900 mb-4">📊 仪表盘</h2>
+
+          <!-- Stat Cards -->
+          <div class="grid grid-cols-4 gap-4 mb-8">
+            <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow">
+              <div class="text-3xl mb-2">🖼️</div>
+              <div id="stat-photo-count" class="text-3xl font-bold text-gray-900">-</div>
+              <div class="text-sm text-gray-500 mt-1">照片总数</div>
+            </div>
+            <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow">
+              <div class="text-3xl mb-2">👤</div>
+              <div id="stat-student-count" class="text-3xl font-bold text-gray-900">-</div>
+              <div class="text-sm text-gray-500 mt-1">学生总数</div>
+            </div>
+            <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow">
+              <div class="text-3xl mb-2">🏷️</div>
+              <div id="stat-tag-count" class="text-3xl font-bold text-gray-900">-</div>
+              <div class="text-sm text-gray-500 mt-1">标签总数</div>
+            </div>
+            <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow">
+              <div class="text-3xl mb-2">💾</div>
+              <div id="stat-storage-bytes" class="text-3xl font-bold text-gray-900">-</div>
+              <div class="text-sm text-gray-500 mt-1">存储占用</div>
+            </div>
+          </div>
+
+          <!-- Export Section -->
+          <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+            <h3 class="font-semibold text-gray-800 mb-2">📋 数据导出</h3>
+            <p class="text-sm text-gray-500 mb-3">导出学生名单为 CSV 文件，包含姓名和密钥。</p>
+            <button id="export-students-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-colors">
+              导出学生名单
+            </button>
+          </div>
+        </div>
+
+        <!-- ============================================================ -->
         <!-- Tab: Workspace (打标工作台)                                   -->
         <!-- ============================================================ -->
-        <div id="tab-workspace" class="tab-panel">
+        <div id="tab-workspace" class="tab-panel hidden">
 
           <!-- Workspace Area (visible when unprocessed images exist) -->
           <div id="workspace-area">

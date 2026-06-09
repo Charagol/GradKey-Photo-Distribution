@@ -16,7 +16,7 @@ const state = {
     token: null,
 
     // Navigation
-    currentTab: 'workspace',
+    currentTab: 'dashboard',
 
     // Image data (core)
     allImages: [],           // GET /api/admin/images 全量
@@ -397,6 +397,9 @@ function bindEvents() {
         if (e.key === 'Enter') updatePassword();
     });
 
+    // ── Dashboard (V4.0 P5) ──
+    document.getElementById('export-students-btn').addEventListener('click', exportStudents);
+
     // ── Edit Modal ──
     document.getElementById('modal-close-btn').addEventListener('click', closeEditModal);
     document.getElementById('modal-cancel-btn').addEventListener('click', closeEditModal);
@@ -451,7 +454,9 @@ function switchTab(name) {
     if (panel) panel.classList.remove('hidden');
 
     // Load data (fire-and-forget with error handling)
-    if (name === 'workspace') {
+    if (name === 'dashboard') {
+        loadDashboardData();
+    } else if (name === 'workspace') {
         loadAllWorkspaceData();
     } else if (name === 'students') {
         loadStudents();
@@ -459,6 +464,60 @@ function switchTab(name) {
         loadTagGroups().catch(err => showToast(err.message, 'error'));
     } else if (name === 'images') {
         loadAllImages().then(() => renderImageMultiSelectBar());
+    }
+}
+
+// ==========================================================================
+// V4.0 P5: Dashboard
+// ==========================================================================
+
+async function loadDashboardData() {
+    try {
+        const data = await apiGet('/api/admin/dashboard/stats');
+        renderDashboard(data);
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
+}
+
+function renderDashboard(data) {
+    document.getElementById('stat-photo-count').textContent = data.photo_count;
+    document.getElementById('stat-student-count').textContent = data.student_count;
+    document.getElementById('stat-tag-count').textContent = data.tag_count;
+
+    // Format storage: < 1 GB → MB, >= 1 GB → GB, keep 1 decimal
+    const gb = 1024 * 1024 * 1024;
+    const mb = 1024 * 1024;
+    let storageText;
+    if (data.storage_bytes >= gb) {
+        storageText = (data.storage_bytes / gb).toFixed(1) + ' GB';
+    } else if (data.storage_bytes >= mb) {
+        storageText = (data.storage_bytes / mb).toFixed(1) + ' MB';
+    } else {
+        storageText = data.storage_bytes + ' B';
+    }
+    document.getElementById('stat-storage-bytes').textContent = storageText;
+}
+
+async function exportStudents() {
+    try {
+        const resp = await fetchAPI('/api/admin/students/export');
+        if (!resp.ok) {
+            const errData = await resp.json().catch(() => ({}));
+            throw new Error(errData.detail || '导出失败');
+        }
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'students_export.csv';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('学生名单已导出', 'success');
+    } catch (err) {
+        showToast(err.message, 'error');
     }
 }
 
