@@ -755,7 +755,7 @@ class TestStudentExportCsv:
     """V4.0 P5: GET /api/admin/students/export 测试。"""
 
     def test_export_students_csv(self, client):
-        """导出学生名单 → Content-Type: text/csv，内容正确。"""
+        """导出学生名单 → Content-Type: text/csv，BOM + 表头 + 数据行正确。"""
         headers = _admin_auth(client)
 
         # 创建学生
@@ -771,24 +771,38 @@ class TestStudentExportCsv:
         assert "students_export.csv" in resp.headers["content-disposition"]
 
         body = resp.text
-        lines = body.strip().split("\r\n") if "\r\n" in body else body.strip().split("\n")
-        assert len(lines) == 2
+        # 验证 UTF-8 BOM 存在
+        assert body.startswith('\ufeff')
 
-        # 每行格式："姓名","密钥"
-        for line in lines:
+        lines = body.strip().split("\r\n") if "\r\n" in body else body.strip().split("\n")
+        # 表头 + 2 条数据 = 3 行
+        assert len(lines) == 3
+
+        # 第一行为表头（BOM 在首行开头）
+        assert lines[0] == '\ufeff"姓名","密钥"'
+
+        # 数据行格式："姓名","密钥"
+        for line in lines[1:]:
             parts = line.split(",")
             assert len(parts) == 2
             assert parts[0].startswith('"') and parts[0].endswith('"')
             assert parts[1].startswith('"') and parts[1].endswith('"')
 
     def test_export_students_empty(self, client):
-        """空学生列表 → 返回空 body。"""
+        """空学生列表 → 仅含 BOM + 表头行，无数据行。"""
         headers = _admin_auth(client)
 
         resp = client.get("/api/admin/students/export", headers=headers)
         assert resp.status_code == 200
         assert resp.headers["content-type"].startswith("text/csv")
-        assert resp.text == "" or resp.text.strip() == ""
+
+        body = resp.text
+        # BOM 存在
+        assert body.startswith('\ufeff')
+        # 仅表头行
+        lines = body.strip().split("\r\n") if "\r\n" in body else body.strip().split("\n")
+        assert len(lines) == 1
+        assert lines[0] == '\ufeff"姓名","密钥"'
 
     def test_export_students_unauthorized(self, client):
         """无认证 → 401。"""

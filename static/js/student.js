@@ -300,7 +300,7 @@ function renderPhotoGrid() {
                         alt="${escapeHtml(img.file_name || '照片')}"
                         class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                         loading="lazy"
-                        onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22300%22 height=%22300%22><rect fill=%22%23e5e7eb%22 width=%22300%22 height=%22300%22/><text x=%22150%22 y=%22155%22 text-anchor=%22middle%22 fill=%22%239ca3af%22 font-size=%2216%22>加载失败</text></svg>'"
+                        onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22300%22 height=%22300%22><rect fill=%22%23e5e7eb%22 width=%22300%22 height=%22300%22/><text x=%22150%22 y=%22155%22 text-anchor=%22middle%22 fill=%22%239ca3af%22 font-size=%2216%22>加载失败</text></svg>';reportImageLoadFailure()"
                     />
                 </div>
 
@@ -715,4 +715,54 @@ function escapeHtml(str) {
     const div = document.createElement('div');
     div.appendChild(document.createTextNode(str));
     return div.innerHTML;
+}
+            case 'download':
+                if (!btn.disabled) startDownload();
+                break;
+            case 'cancel':
+                toggleMultiSelectMode();
+                break;
+        }
+    });
+
+    // Download progress
+    document.getElementById('abort-download-btn').addEventListener('click', abortDownload);
+
+    // Lightbox controls
+    document.getElementById('lightbox-close').addEventListener('click', closeLightbox);
+    document.getElementById('lightbox-prev').addEventListener('click', prevImage);
+    document.getElementById('lightbox-next').addEventListener('click', nextImage);
+
+    // Lightbox backdrop click to close
+    document.getElementById('lightbox').addEventListener('click', function (e) {
+        if (e.target === this) closeLightbox();
+    });
+
+    // Touch swipe support for lightbox
+    let touchStartX = 0;
+    let touchStartY = 0;
+    document.getElementById('lightbox').addEventListener('touchstart', (e) => {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+    document.getElementById('lightbox').addEventListener('touchend', (e) => {
+        const dx = e.changedTouches[0].clientX - touchStartX;
+        const dy = e.changedTouches[0].clientY - touchStartY;
+        if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
+            if (dx > 0) prevImage();
+            else nextImage();
+        }
+    });
+}
+
+// ============================================================================
+// Utilities
+// ============================================================================
+
+function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.appendChild(document.createTextNode(str));
+    return div.innerHTML;
+}
 }

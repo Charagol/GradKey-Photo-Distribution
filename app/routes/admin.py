@@ -118,11 +118,17 @@ async def export_students_csv(db: Session = Depends(get_db)):
 
     注意：此路由必须在 /students/{student_id} 之前注册，
     否则 FastAPI 将 "export" 匹配为 student_id 路径参数。
+
+    V4.0 P5 修复：UTF-8 BOM 头 + 表头行，确保 Excel 正确识别中文。
     """
     students = list_students(db)
 
     output = io.StringIO()
+    # UTF-8 BOM — Excel 以此识别 UTF-8 编码
+    output.write('\ufeff')
     writer = csv.writer(output, quoting=csv.QUOTE_ALL)
+    # 表头行
+    writer.writerow(['姓名', '密钥'])
     for s in students:
         writer.writerow([s.name, s.secret_key])
 

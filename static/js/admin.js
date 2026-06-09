@@ -56,7 +56,67 @@ document.addEventListener('DOMContentLoaded', () => {
         showLogin();
     }
     bindEvents();
+    initOfflineBanner();
 });
+
+// ==========================================================================
+// V4.0 P6: Network Status Banner
+// ==========================================================================
+
+function initOfflineBanner() {
+    let bannerEl = null;
+    let userDismissed = false;
+
+    function showBanner() {
+        if (bannerEl) return;
+        userDismissed = false;
+        bannerEl = document.createElement('div');
+        bannerEl.id = 'offline-banner';
+        bannerEl.className = 'fixed top-0 left-0 right-0 bg-red-500 text-white text-sm text-center py-2 z-40 flex items-center justify-center gap-2 transition-all';
+        bannerEl.innerHTML = `
+            <span>⚠️ 网络已断开，部分功能不可用</span>
+            <button class="ml-2 text-white/80 hover:text-white text-lg leading-none font-bold" id="offline-banner-close">&times;</button>
+        `;
+        document.body.prepend(bannerEl);
+        document.getElementById('offline-banner-close').addEventListener('click', () => {
+            bannerEl.remove();
+            bannerEl = null;
+            userDismissed = true;
+        });
+    }
+
+    function hideBanner() {
+        if (bannerEl) {
+            bannerEl.remove();
+            bannerEl = null;
+        }
+    }
+
+    window.addEventListener('offline', () => {
+        showBanner();
+    });
+
+    window.addEventListener('online', () => {
+        hideBanner();
+    });
+
+    // Show immediately if already offline on page load
+    if (!navigator.onLine) {
+        showBanner();
+    }
+}
+
+// ==========================================================================
+// V4.0 P6: Image Load Failure Toast (debounced — once per page lifecycle)
+// ==========================================================================
+
+window._imgLoadFailedReported = false;
+window.reportImageLoadFailure = function() {
+    if (!window._imgLoadFailedReported) {
+        window._imgLoadFailedReported = true;
+        showToast('图片加载失败，请检查网络或稍后刷新', 'error');
+    }
+};
 
 // ==========================================================================
 // Auth
@@ -641,7 +701,7 @@ function renderUnprocessedGrid() {
                     <img src="${escapeHtml(img.thumbnail_url || img.url)}" alt="${escapeHtml(img.file_name || '')}"
                          class="w-full h-full object-cover"
                          loading="lazy"
-                         onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 30%22%3E%3Crect fill=%22%23f3f4f6%22 width=%2240%22 height=%2230%22/%3E%3Ctext x=%2220%22 y=%2217%22 text-anchor=%22middle%22 fill=%22%239ca3af%22 font-size=%226%22%3E🖼%3C/text%3E%3C/svg%3E'">
+                         onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 30%22%3E%3Crect fill=%22%23f3f4f6%22 width=%2240%22 height=%2230%22/%3E%3Ctext x=%2220%22 y=%2217%22 text-anchor=%22middle%22 fill=%22%239ca3af%22 font-size=%226%22%3E🖼%3C/text%3E%3C/svg%3E';reportImageLoadFailure()">
                     <!-- V4.0 P4: batch mode checkbox overlay -->
                     <div class="batch-select-overlay absolute inset-0 ${isBatchMode && isBatchSelected ? 'flex' : 'hidden'} items-center justify-center bg-indigo-500/30 pointer-events-none">
                         <div class="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center shadow-lg">
@@ -1075,7 +1135,7 @@ function renderProcessedGrid() {
                         <img src="${escapeHtml(img.thumbnail_url || img.url)}" alt="${escapeHtml(img.file_name || '')}"
                              class="w-full h-full object-cover"
                              loading="lazy"
-                             onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 30%22%3E%3Crect fill=%22%23f3f4f6%22 width=%2240%22 height=%2230%22/%3E%3Ctext x=%2220%22 y=%2217%22 text-anchor=%22middle%22 fill=%22%239ca3af%22 font-size=%226%22%3E🖼%3C/text%3E%3C/svg%3E'">
+                             onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 30%22%3E%3Crect fill=%22%23f3f4f6%22 width=%2240%22 height=%2230%22/%3E%3Ctext x=%2220%22 y=%2217%22 text-anchor=%22middle%22 fill=%22%239ca3af%22 font-size=%226%22%3E🖼%3C/text%3E%3C/svg%3E';reportImageLoadFailure()">
                     </div>
                     <div class="p-2">
                         <p class="text-xs text-gray-600 truncate mb-1.5">${escapeHtml(img.file_name || 'untitled')}</p>
@@ -1425,31 +1485,59 @@ async function uploadImages() {
         return;
     }
 
-    const formData = new FormData();
-    for (const file of filesInput.files) {
-        formData.append('files', file);
-    }
-
+    // Snapshot files for retry — FormData is not reusable after fetch
+    const files = Array.from(filesInput.files);
     const uploadBtn = document.getElementById('upload-btn');
     uploadBtn.disabled = true;
     uploadBtn.textContent = '上传中...';
-    statusEl.textContent = `正在上传 ${filesInput.files.length} 个文件...`;
+    statusEl.textContent = `正在上传 ${files.length} 个文件...`;
     statusEl.classList.remove('hidden');
 
-    try {
-        const data = await apiPost('/api/admin/images', formData);
-        showToast(`成功上传 ${data.images.length} 张图片`, 'success');
-        filesInput.value = '';
-        statusEl.classList.add('hidden');
-        await loadImages();
-        renderAllImages();
-    } catch (err) {
-        showToast(err.message, 'error');
-        statusEl.textContent = '上传失败';
-    } finally {
-        uploadBtn.disabled = false;
-        uploadBtn.textContent = '上传';
+    // V4.0 P6: retry with exponential backoff (1s, 2s, 4s), max 3 retries
+    const MAX_RETRIES = 3;
+    const BACKOFF_MS = [1000, 2000, 4000];
+
+    let lastError = null;
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        // Rebuild FormData each attempt (FormData is streamed and not reusable)
+        const formData = new FormData();
+        for (const file of files) {
+            formData.append('files', file);
+        }
+
+        try {
+            const data = await apiPost('/api/admin/images', formData);
+            showToast(`成功上传 ${data.images.length} 张图片`, 'success');
+            filesInput.value = '';
+            statusEl.classList.add('hidden');
+            await loadImages();
+            renderAllImages();
+            return; // success — exit retry loop
+        } catch (err) {
+            lastError = err;
+
+            // Only retry on network errors (fetch fails before HTTP response)
+            // HTTP errors (400, 401, 413 etc.) are thrown as Error with detail message
+            const isNetworkError = err instanceof TypeError || err.name === 'AbortError';
+            if (!isNetworkError || attempt === MAX_RETRIES) break;
+
+            // Exponential backoff retry
+            uploadBtn.textContent = `上传中（重试 ${attempt + 1}/${MAX_RETRIES}）...`;
+            statusEl.textContent = `上传失败，${BACKOFF_MS[attempt] / 1000}s 后重试...`;
+            await new Promise(r => setTimeout(r, BACKOFF_MS[attempt]));
+        }
     }
+
+    // All retries exhausted or HTTP error
+    if (lastError instanceof TypeError) {
+        showToast(`上传失败：已重试 ${MAX_RETRIES} 次，请检查网络后重试`, 'error');
+    } else {
+        showToast(lastError ? lastError.message : '上传失败', 'error');
+    }
+    statusEl.textContent = '上传失败';
+
+    uploadBtn.disabled = false;
+    uploadBtn.textContent = '上传';
 }
 
 // ==========================================================================
@@ -1568,7 +1656,7 @@ function renderAllImages() {
                 <img src="${escapeHtml(img.thumbnail_url || img.url)}" alt="${escapeHtml(img.file_name || '')}"
                      class="w-full h-full object-cover"
                      loading="lazy"
-                     onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 30%22%3E%3Crect fill=%22%23f3f4f6%22 width=%2240%22 height=%2230%22/%3E%3Ctext x=%2220%22 y=%2217%22 text-anchor=%22middle%22 fill=%22%239ca3af%22 font-size=%226%22%3E🖼%3C/text%3E%3C/svg%3E'">
+                     onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 30%22%3E%3Crect fill=%22%23f3f4f6%22 width=%2240%22 height=%2230%22/%3E%3Ctext x=%2220%22 y=%2217%22 text-anchor=%22middle%22 fill=%22%239ca3af%22 font-size=%226%22%3E🖼%3C/text%3E%3C/svg%3E';reportImageLoadFailure()">
                 <!-- Multi-select overlay -->
                 <div class="image-select-overlay absolute inset-0 ${state.isMultiSelectMode && isSelected ? 'flex' : 'hidden'} items-center justify-center bg-indigo-500/30 pointer-events-none">
                     <div class="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center shadow-lg">
