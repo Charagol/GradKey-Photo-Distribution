@@ -304,9 +304,9 @@ async function startDownload() {
 | PUT | `/api/admin/tags/{id}` | 移动标签到其他分组 | ✅ | |
 | DELETE | `/api/admin/tags/{id}` | 删除标签 | 已有 | |
 | PUT | `/api/admin/images/{id}/tags` | 图片标签替换（替换全部 tag_ids） | ✅ | |
-| GET | `/api/admin/images?tagged=true` | 按打标状态筛选图片 | ✅ | |
+| GET | `/api/admin/images?tagged=true` | 按打标状态筛选图片，响应含 `thumbnail_url` | ✅ | ✅ |
 | DELETE | `/api/admin/images/batch` | 批量删除图片（多选模式） | | ✅ |
-| GET | `/api/student/images` | 按学生姓名匹配标签查询图片 | 已有 | |
+| GET | `/api/student/images` | 按学生姓名匹配标签查询图片，响应含 `thumbnail_url` | 已有 | ✅ |
 
 ---
 
@@ -394,4 +394,4 @@ pytest tests/ -v --cov=app --cov-report=term-missing
 
 ---
 
-*最后更新: 2026-06-06 · V3.0 正式版*
+*最后更新: 2026-06-09 · V3.0 正式版*
