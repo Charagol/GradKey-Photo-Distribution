@@ -220,6 +220,9 @@ function renderTagFilter() {
     let html = `<button class="filter-pill ${state.activeTag === '__all__' ? 'bg-indigo-600 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'} px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all" data-tag="__all__">全部</button>`;
 
     state.allTags.forEach(tag => {
+        // V4.0 P9: hide own name tag — all visible photos already match it
+        if (tag.name === state.studentName) return;
+
         const isActive = state.activeTag === tag.name;
         html += `<button class="filter-pill ${isActive ? 'bg-indigo-600 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'} px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all" data-tag="${escapeHtml(tag.name)}">${escapeHtml(tag.name)}</button>`;
     });
@@ -715,54 +718,4 @@ function escapeHtml(str) {
     const div = document.createElement('div');
     div.appendChild(document.createTextNode(str));
     return div.innerHTML;
-}
-            case 'download':
-                if (!btn.disabled) startDownload();
-                break;
-            case 'cancel':
-                toggleMultiSelectMode();
-                break;
-        }
-    });
-
-    // Download progress
-    document.getElementById('abort-download-btn').addEventListener('click', abortDownload);
-
-    // Lightbox controls
-    document.getElementById('lightbox-close').addEventListener('click', closeLightbox);
-    document.getElementById('lightbox-prev').addEventListener('click', prevImage);
-    document.getElementById('lightbox-next').addEventListener('click', nextImage);
-
-    // Lightbox backdrop click to close
-    document.getElementById('lightbox').addEventListener('click', function (e) {
-        if (e.target === this) closeLightbox();
-    });
-
-    // Touch swipe support for lightbox
-    let touchStartX = 0;
-    let touchStartY = 0;
-    document.getElementById('lightbox').addEventListener('touchstart', (e) => {
-        touchStartX = e.touches[0].clientX;
-        touchStartY = e.touches[0].clientY;
-    }, { passive: true });
-    document.getElementById('lightbox').addEventListener('touchend', (e) => {
-        const dx = e.changedTouches[0].clientX - touchStartX;
-        const dy = e.changedTouches[0].clientY - touchStartY;
-        if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
-            if (dx > 0) prevImage();
-            else nextImage();
-        }
-    });
-}
-
-// ============================================================================
-// Utilities
-// ============================================================================
-
-function escapeHtml(str) {
-    if (!str) return '';
-    const div = document.createElement('div');
-    div.appendChild(document.createTextNode(str));
-    return div.innerHTML;
-}
 }

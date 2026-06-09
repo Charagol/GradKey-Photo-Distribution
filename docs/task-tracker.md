@@ -470,13 +470,32 @@ class ITaggingService(ABC):
 
 ---
 
+### Phase 30: V4.0 P9 — Docker 测试修复与体验优化
+
+**背景**: Docker 部署测试中发现了 5 个 bug/体验问题 + 1 个冗余 UI，统一修复。
+
+#### 修复清单
+
+- [x] **启动自动建表** (`app/main.py`): 添加 `@app.on_event("startup")` → `Base.metadata.create_all(bind=engine)`，新部署用户不再 `no such table`
+- [x] **学生端腐败代码** (`static/js/student.js`): 删除第 719-768 行孤立重复代码块（P6 容错增强提交时的事件委托残留：stray `case/case/}`、重复 `escapeHtml`、重复事件绑定），修复脚本解析失败
+- [x] **管理端登录反馈** (`static/js/admin.js`): `handleLogin` 添加按钮 loading 态（disabled + "登录中..."）+ 成功/失败 toast 通知（参照 `student.js` 模式）
+- [x] **打标工作台空状态瀑布流** (`static/admin.html` + `static/js/admin.js`): 空状态文案从 `#tag-group-panels` 瀑布流容器移出至独立 `<p id="tag-pool-empty">`，`renderTagPool()` 控制 `hidden` 切换，避免 `column-count: 2` 撕裂单行文案
+- [x] **存储单位人性化** (`static/js/admin.js` `renderDashboard`): `< 1 MB → KB`（如 "103.7 KB"），补充 KB 档位，避免 "106196 B" 无意义字节数
+- [x] **学生端过滤移除本人标签** (`static/js/student.js` `renderTagFilter`): `tag.name === state.studentName` 时跳过渲染。隐私隔离已保证所有照片属本人，姓名标签与「全部」完全重叠
+
+#### 测试覆盖
+
+- [x] 113/113 全量测试通过（纯前端 bug 修复 + 后端 startup 事件对现有测试透明）
+
+---
+
 ## 项目总结
 
 ### 开发规模
 
 | 指标 | 数值 |
 |---|---|
-| 总 Phase 数 | 30 |
+| 总 Phase 数 | 31 |
 | 后端代码 (Python) | ~2000 行 |
 | 前端代码 (HTML + JS) | ~2000 行 |
 | 测试用例 | 113 (全量通过) |
@@ -500,4 +519,4 @@ class ITaggingService(ABC):
 
 ---
 
-*最后更新: 2026-06-10 | V4.0 P8 完成*
+*最后更新: 2026-06-10 | V4.0 P9 完成*

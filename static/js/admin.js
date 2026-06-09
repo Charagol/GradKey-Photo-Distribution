@@ -159,6 +159,11 @@ function isTokenExpired(token) {
 async function handleLogin() {
     const password = document.getElementById('login-password').value;
     const errorEl = document.getElementById('login-error');
+    const btn = document.getElementById('login-btn');
+
+    btn.disabled = true;
+    btn.textContent = '登录中...';
+    errorEl.classList.add('hidden');
 
     try {
         const resp = await fetch('/api/admin/auth', {
@@ -173,10 +178,12 @@ async function handleLogin() {
         const data = await resp.json();
         state.token = data.access_token;
         localStorage.setItem('admin_token', state.token);
+        showToast('登录成功', 'success');
         showDashboard();
     } catch (err) {
-        errorEl.textContent = err.message;
-        errorEl.classList.remove('hidden');
+        btn.disabled = false;
+        btn.textContent = '登录';
+        showToast(err.message, 'error');
     }
 }
 
@@ -549,14 +556,17 @@ function renderDashboard(data) {
     document.getElementById('stat-student-count').textContent = data.student_count;
     document.getElementById('stat-tag-count').textContent = data.tag_count;
 
-    // Format storage: < 1 GB → MB, >= 1 GB → GB, keep 1 decimal
+    // Format storage: < 1 MB → KB, >= 1 MB < 1 GB → MB, >= 1 GB → GB, keep 1 decimal
     const gb = 1024 * 1024 * 1024;
     const mb = 1024 * 1024;
+    const kb = 1024;
     let storageText;
     if (data.storage_bytes >= gb) {
         storageText = (data.storage_bytes / gb).toFixed(1) + ' GB';
     } else if (data.storage_bytes >= mb) {
         storageText = (data.storage_bytes / mb).toFixed(1) + ' MB';
+    } else if (data.storage_bytes >= kb) {
+        storageText = (data.storage_bytes / kb).toFixed(1) + ' KB';
     } else {
         storageText = data.storage_bytes + ' B';
     }
@@ -777,7 +787,10 @@ function renderTagPool() {
     }).join('');
 
     if (state.tagGroups.length === 0) {
-        container.innerHTML = '<p class="text-gray-400 text-sm py-4">暂无标签分组，请先在"标签分组"中添加</p>';
+        container.innerHTML = '';
+        document.getElementById('tag-pool-empty').classList.remove('hidden');
+    } else {
+        document.getElementById('tag-pool-empty').classList.add('hidden');
     }
 }
 

@@ -15,6 +15,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
+from app.database import Base, engine
 from app.routes import admin_router, auth_router, student_router
 
 logger = logging.getLogger(__name__)
@@ -24,6 +25,15 @@ app = FastAPI(
     version="2.0.0",
     description="本地 FastAPI + 阿里云 OSS，动静分离，隐私隔离。",
 )
+
+# ── 启动事件 ────────────────────────────────────────────────────────────────
+
+
+@app.on_event("startup")
+def on_startup():
+    """首次启动自动创建数据库表（幂等操作）。"""
+    Base.metadata.create_all(bind=engine)
+
 
 # ── 中间件 ────────────────────────────────────────────────────────────────
 
