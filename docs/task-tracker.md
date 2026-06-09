@@ -301,13 +301,44 @@ class ITaggingService(ABC):
 
 ---
 
+### Phase 25: V4.0 P4 — 批量打标 (多选照片 + 分组全选标签)
+
+**背景**: 当一位同学出现在多张合影中，需要对多张照片打上同一标签。V4.0 P4 提供两个方向的批量操作。
+
+#### Direction A: 多选照片批量打标
+
+- [x] `state` 新增 `isBatchImageMode: false` + `batchSelectedImageIds: new Set()`
+- [x] `admin.html` 新增 `#batch-image-bar` 容器（位于 `#unprocessed-pool` 内）
+- [x] `renderBatchImageBar()` — 状态驱动渲染：非批量模式显示「批量模式」入口按钮；批量模式显示全选/取消全选/已选计数/确认打标/取消
+- [x] `enterBatchImageMode()` / `exitBatchImageMode()` — 切换批量模式，重置选中集合
+- [x] `selectAllUnprocessed()` / `deselectAllUnprocessed()` — 全选/取消全选待打标图片
+- [x] `toggleBatchImageSelection(imageId)` — 单张图片选中/取消切换
+- [x] `batchConfirmTags()` — 串行 `PUT /api/admin/images/{id}/tags` 逐张打标，`processingLock` 保护，失败时 toast 报告具体图片；**全部完成后统一清空 `selectedTagIds`**
+- [x] `renderUnprocessedGrid()` — 批量模式下缩略图叠加 indigo 半透明遮罩 + 白色 ✓ 圆形复选框 + 选中项 indigo ring
+- [x] `renderWorkspace()` 调用 `renderBatchImageBar()`
+- [x] `toggleTagSelection()` — 批量模式下联动调用 `renderBatchImageBar()` 刷新确认按钮状态
+- [x] 事件委托: `#unprocessed-pool` 容器监听批量栏按钮；`#unprocessed-grid` 在批量模式下点击触发 `toggleBatchImageSelection` 而非 `selectImage`
+- [x] `switchTab()` / `splitImages()` — 离开工作台或数据重载时重置批量模式
+
+#### Direction B: 点击分组标题全选/取消全选组内标签
+
+- [x] `toggleGroupTags(groupId)` — 若组内全部标签已选中 → 取消全选；否则 → 补选所有组内未选中标签
+- [x] `renderTagPool()` — 分组标题添加 `cursor-pointer hover:text-indigo-600 select-none` + `data-action="toggle-group-tags"` + `data-group-id`；全选状态高亮（`text-indigo-700` + `✓` 标记）
+- [x] 事件委托: `#tag-pool` 优先检查分组标题点击 → `toggleGroupTags`；否则走原有 tag chip 逻辑
+
+#### 测试覆盖
+
+- [x] 108/108 全量测试通过
+
+---
+
 ## 项目总结
 
 ### 开发规模
 
 | 指标 | 数值 |
 |---|---|
-| 总 Phase 数 | 25 |
+| 总 Phase 数 | 26 |
 | 后端代码 (Python) | ~2000 行 |
 | 前端代码 (HTML + JS) | ~2000 行 |
 | 测试用例 | 108 (全量通过) |
@@ -331,4 +362,4 @@ class ITaggingService(ABC):
 
 ---
 
-*最后更新: 2026-06-09 | V4.0 P2 完成*
+*最后更新: 2026-06-09 | V4.0 P4 完成*

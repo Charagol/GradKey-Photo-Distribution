@@ -38,6 +38,9 @@ const state = {
     modalTagIds: [],         // temp tag IDs in edit modal
     isMultiSelectMode: false,// Phase 21: image management multi-select mode
     selectedImageIds: new Set(), // Phase 22: selected image IDs for batch delete
+    // V4.0 P4: batch tagging
+    isBatchImageMode: false,         // Direction A: multi-select unprocessed images
+    batchSelectedImageIds: new Set(), // Direction A: selected unprocessed image IDs
 };
 
 // ==========================================================================
@@ -239,10 +242,21 @@ function bindEvents() {
     document.getElementById('unprocessed-grid').addEventListener('click', (e) => {
         const item = e.target.closest('.thumb-item');
         if (!item || state.processingLock) return;
-        selectImage(Number(item.dataset.imageId));
+        if (state.isBatchImageMode) {
+            toggleBatchImageSelection(Number(item.dataset.imageId));
+        } else {
+            selectImage(Number(item.dataset.imageId));
+        }
     });
 
     document.getElementById('tag-pool').addEventListener('click', (e) => {
+        // V4.0 P4 Direction B: group header click to toggle all group tags
+        const groupHeader = e.target.closest('[data-action="toggle-group-tags"]');
+        if (groupHeader && !state.processingLock) {
+            toggleGroupTags(Number(groupHeader.dataset.groupId));
+            return;
+        }
+
         const chip = e.target.closest('.tag-chip');
         if (!chip || state.processingLock) return;
         toggleTagSelection(Number(chip.dataset.tagId));  // V3.0: multi-select toggle
@@ -253,6 +267,19 @@ function bindEvents() {
         const btn = e.target.closest('[data-action="confirm-tags"]');
         if (!btn || btn.disabled || state.processingLock) return;
         confirmTags();
+    });
+
+    // V4.0 P4: batch bar buttons (rendered dynamically in #batch-image-bar)
+    document.getElementById('unprocessed-pool').addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-action]');
+        if (!btn || btn.closest('#tag-pool')) return; // exclude tag-pool clicks
+        switch (btn.dataset.action) {
+            case 'enter-batch-image': enterBatchImageMode(); break;
+            case 'batch-select-all': selectAllUnprocessed(); break;
+            case 'batch-deselect-all': deselectAllUnprocessed(); break;
+            case 'batch-apply': batchConfirmTags(); break;
+            case 'cancel-batch-image': exitBatchImageMode(); break;
+        }
     });
 
     document.getElementById('processed-grid').addEventListener('click', (e) => {
@@ -399,6 +426,12 @@ function switchTab(name) {
         state.selectedImageIds = new Set();
     }
 
+    // V4.0 P4: reset batch image mode when leaving workspace
+    if (state.currentTab === 'workspace' && name !== 'workspace') {
+        state.isBatchImageMode = false;
+        state.batchSelectedImageIds = new Set();
+    }
+
     state.currentTab = name;
 
     // Update sidebar buttons
@@ -487,6 +520,9 @@ async function loadAllImages() {
 // ==========================================================================
 function splitImages() {
     state.selectedTagIds = [];  // V3.0: reset tag selection on data reload
+    // V4.0 P4: reset batch mode on data reload
+    state.isBatchImageMode = false;
+    state.batchSelectedImageIds = new Set();
     state.unprocessed = state.allImages.filter(img => !img.tags || img.tags.length === 0);
     state.processed = state.allImages
         .filter(img => img.tags && img.tags.length > 0)
@@ -514,6 +550,7 @@ function renderWorkspace() {
         area.classList.remove('hidden');
         empty.classList.add('hidden');
         renderUnprocessedGrid();
+        renderBatchImageBar();
         renderTagPool();
     }
 
@@ -524,17 +561,34 @@ function renderWorkspace() {
 
 function renderUnprocessedGrid() {
     const grid = document.getElementById('unprocessed-grid');
+    const isBatchMode = state.isBatchImageMode;
+
     grid.innerHTML = state.unprocessed.map(img => {
-        const isSelected = img.id === state.currentImageId;
-        const ringClass = isSelected ? 'ring-2 ring-indigo-500 ring-offset-2' : '';
+        let ringClass = '';
+        let isBatchSelected = false;
+
+        if (isBatchMode) {
+            isBatchSelected = state.batchSelectedImageIds.has(img.id);
+            ringClass = isBatchSelected ? 'ring-2 ring-indigo-500 ring-offset-2' : '';
+        } else {
+            const isSelected = img.id === state.currentImageId;
+            ringClass = isSelected ? 'ring-2 ring-indigo-500 ring-offset-2' : '';
+        }
+
         return `
             <div class="thumb-item ${ringClass} rounded-lg overflow-hidden cursor-pointer bg-gray-100 transition-shadow hover:shadow-md"
                  data-image-id="${img.id}">
-                <div class="aspect-[4/3]">
+                <div class="aspect-[4/3] relative">
                     <img src="${escapeHtml(img.thumbnail_url || img.url)}" alt="${escapeHtml(img.file_name || '')}"
                          class="w-full h-full object-cover"
                          loading="lazy"
                          onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 30%22%3E%3Crect fill=%22%23f3f4f6%22 width=%2240%22 height=%2230%22/%3E%3Ctext x=%2220%22 y=%2217%22 text-anchor=%22middle%22 fill=%22%239ca3af%22 font-size=%226%22%3E🖼%3C/text%3E%3C/svg%3E'">
+                    <!-- V4.0 P4: batch mode checkbox overlay -->
+                    <div class="batch-select-overlay absolute inset-0 ${isBatchMode && isBatchSelected ? 'flex' : 'hidden'} items-center justify-center bg-indigo-500/30 pointer-events-none">
+                        <div class="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center shadow-lg">
+                            <span class="text-white text-sm font-bold">✓</span>
+                        </div>
+                    </div>
                 </div>
                 <div class="px-2 py-1.5">
                     <p class="text-xs text-gray-600 truncate">${escapeHtml(img.file_name || 'untitled')}</p>
@@ -566,9 +620,16 @@ function renderTagPool() {
         // 过滤空分类
         if (tags.length === 0) return '';
 
+        // V4.0 P4 Direction B: check if all group tags are selected for highlight
+        const allSelected = tags.every(tag => state.selectedTagIds.includes(tag.id));
+
         return `
             <div class="tag-group-panel bg-white rounded-xl border border-gray-200 p-4">
-                <h4 class="text-sm font-semibold text-gray-800 mb-3">${escapeHtml(group.name)}</h4>
+                <h4 class="text-sm font-semibold mb-3 cursor-pointer hover:text-indigo-600 transition-colors select-none ${allSelected ? 'text-indigo-700' : 'text-gray-800'}"
+                    data-action="toggle-group-tags"
+                    data-group-id="${group.id}">
+                    ${escapeHtml(group.name)}${allSelected ? ' ✓' : ''}
+                </h4>
                 <div class="flex flex-wrap gap-2">
                     ${tags.map(tag => {
                         const isSel = state.selectedTagIds.includes(tag.id);
@@ -587,6 +648,171 @@ function renderTagPool() {
 
     if (state.tagGroups.length === 0) {
         container.innerHTML = '<p class="text-gray-400 text-sm py-4">暂无标签分组，请先在"标签分组"中添加</p>';
+    }
+}
+
+// ==========================================================================
+// V4.0 P4: Batch Image Bar (Direction A — multi-select unprocessed photos)
+// ==========================================================================
+function renderBatchImageBar() {
+    const bar = document.getElementById('batch-image-bar');
+    if (!bar) return;
+
+    if (state.unprocessed.length === 0) {
+        bar.innerHTML = '';
+        return;
+    }
+
+    if (!state.isBatchImageMode) {
+        bar.innerHTML = `
+            <button class="text-sm text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 px-3 py-1.5 rounded-lg transition-colors font-medium"
+                    data-action="enter-batch-image">
+                批量模式
+            </button>`;
+    } else {
+        const count = state.batchSelectedImageIds.size;
+        const canApply = count > 0 && state.selectedTagIds.length > 0;
+        bar.innerHTML = `
+            <div class="flex items-center gap-2 flex-wrap">
+                <button class="text-sm text-indigo-600 hover:text-indigo-700 px-2 py-1 rounded transition-colors font-medium"
+                        data-action="batch-select-all">全选</button>
+                <span class="text-gray-300 text-sm">|</span>
+                <button class="text-sm text-gray-500 hover:text-gray-700 px-2 py-1 rounded transition-colors"
+                        data-action="batch-deselect-all">取消全选</button>
+                <span class="text-sm text-gray-600 font-medium ml-1">已选 ${count} 张</span>
+                <div class="flex-1"></div>
+                <button class="text-sm bg-indigo-600 text-white px-4 py-1.5 rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-indigo-700"
+                        data-action="batch-apply"
+                        ${canApply ? '' : 'disabled'}>
+                    确认打标${count > 0 ? ` (${count})` : ''}
+                </button>
+                <button class="text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 px-3 py-1.5 rounded-lg transition-colors"
+                        data-action="cancel-batch-image">取消</button>
+            </div>`;
+    }
+}
+
+function enterBatchImageMode() {
+    state.isBatchImageMode = true;
+    state.batchSelectedImageIds = new Set();
+    renderBatchImageBar();
+    renderUnprocessedGrid();
+}
+
+function exitBatchImageMode() {
+    state.isBatchImageMode = false;
+    state.batchSelectedImageIds = new Set();
+    renderBatchImageBar();
+    renderUnprocessedGrid();
+}
+
+function toggleBatchImageSelection(imageId) {
+    if (state.processingLock) return;
+    if (state.batchSelectedImageIds.has(imageId)) {
+        state.batchSelectedImageIds.delete(imageId);
+    } else {
+        state.batchSelectedImageIds.add(imageId);
+    }
+    renderBatchImageBar();
+    renderUnprocessedGrid();
+}
+
+function selectAllUnprocessed() {
+    state.unprocessed.forEach(img => state.batchSelectedImageIds.add(img.id));
+    renderBatchImageBar();
+    renderUnprocessedGrid();
+}
+
+function deselectAllUnprocessed() {
+    state.batchSelectedImageIds = new Set();
+    renderBatchImageBar();
+    renderUnprocessedGrid();
+}
+
+async function batchConfirmTags() {
+    if (state.processingLock) return;
+    if (state.batchSelectedImageIds.size === 0) return;
+    if (state.selectedTagIds.length === 0) return;
+
+    const imageIds = [...state.batchSelectedImageIds];
+    const tagCount = state.selectedTagIds.length;
+    let successCount = 0;
+
+    state.processingLock = true;
+
+    for (const imageId of imageIds) {
+        const image = state.allImages.find(img => img.id === imageId);
+        if (!image) continue;
+
+        const existingIds = (image.tags || []).map(t => t.id);
+        const merged = [...existingIds, ...state.selectedTagIds];
+        const uniqueIds = [...new Set(merged)];
+
+        try {
+            await apiPut(`/api/admin/images/${image.id}/tags`, { tag_ids: uniqueIds });
+
+            image.tags = uniqueIds.map(id => ({ id, name: findTagName(id), group_id: findTagGroupId(id) }));
+
+            // Move from unprocessed to processed
+            const idx = state.unprocessed.findIndex(img => img.id === image.id);
+            if (idx !== -1) {
+                state.unprocessed.splice(idx, 1);
+                state.processed.unshift(image);
+            }
+            successCount++;
+        } catch (err) {
+            showToast(`「${image.file_name || imageId}」打标失败: ${err.message}`, 'error');
+        }
+    }
+
+    // Cleanup — clear selections once after all batch operations complete
+    state.selectedTagIds = [];
+    state.batchSelectedImageIds = new Set();
+    state.isBatchImageMode = false;
+    state.processingLock = false;
+
+    // Auto-select next unprocessed
+    if (state.unprocessed.length > 0) {
+        state.currentImageId = state.unprocessed[0].id;
+    } else {
+        state.currentImageId = null;
+    }
+
+    renderWorkspace();
+    renderProcessedGrid();
+    showToast(`已为 ${successCount}/${imageIds.length} 张图片添加 ${tagCount} 个标签`, 'success');
+}
+
+// ==========================================================================
+// V4.0 P4: Group Tag Toggle (Direction B — click group to toggle all tags)
+// ==========================================================================
+function toggleGroupTags(groupId) {
+    if (state.processingLock) return;
+
+    const group = state.tagGroups.find(g => g.id === groupId);
+    if (!group || !group.tags) return;
+
+    const groupTagIds = group.tags.map(t => t.id);
+
+    // Check if all group tags are already selected
+    const allSelected = groupTagIds.every(id => state.selectedTagIds.includes(id));
+
+    if (allSelected) {
+        // Deselect all tags from this group
+        state.selectedTagIds = state.selectedTagIds.filter(id => !groupTagIds.includes(id));
+    } else {
+        // Select all missing tags from this group
+        for (const tagId of groupTagIds) {
+            if (!state.selectedTagIds.includes(tagId)) {
+                state.selectedTagIds.push(tagId);
+            }
+        }
+    }
+
+    renderTagPool();
+    renderConfirmButton();
+    if (state.isBatchImageMode) {
+        renderBatchImageBar();
     }
 }
 
@@ -656,6 +882,10 @@ function toggleTagSelection(tagId) {
 
     renderTagPool();
     renderConfirmButton();
+    // V4.0 P4: in batch mode, tag selection affects apply button state
+    if (state.isBatchImageMode) {
+        renderBatchImageBar();
+    }
 }
 
 function renderConfirmButton() {
