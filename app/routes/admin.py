@@ -4,10 +4,13 @@
 Image 资源通过 IStorageService 管理阿里云 OSS 文件。
 """
 
+import csv
+import io
 import json
 import logging
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -17,6 +20,7 @@ from app.models.image import Image
 from app.models.tag import Tag
 from app.models.tag_group import DEFAULT_TAG_GROUP_NAME, TagGroup
 from app.schemas.admin import (
+    DashboardStatsResponse,
     ImageBatchDeleteRequest,
     ImageListResponse,
     ImageResponse,
@@ -106,6 +110,56 @@ async def create_students_view(body: StudentCreate, db: Session = Depends(get_db
         raise
 
     return created_students
+
+
+@router.get("/students/export")
+async def export_students_csv(db: Session = Depends(get_db)):
+    """导出学生名单为 CSV 文件（姓名,密钥）。
+
+    注意：此路由必须在 /students/{student_id} 之前注册，
+    否则 FastAPI 将 "export" 匹配为 student_id 路径参数。
+    """
+    students = list_students(db)
+
+    output = io.StringIO()
+    writer = csv.writer(output, quoting=csv.QUOTE_ALL)
+    for s in students:
+        writer.writerow([s.name, s.secret_key])
+
+    csv_content = output.getvalue()
+    output.close()
+
+    return Response(
+        content=csv_content,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": "attachment; filename=\"students_export.csv\""},
+    )
+
+
+@router.get("/dashboard/stats", response_model=DashboardStatsResponse)
+async def dashboard_stats(db: Session = Depends(get_db)):
+    """返回管理端仪表盘统计数据：照片数、学生数、标签数、分组数、存储占用。
+
+    storage_bytes 由 Image.file_size 字段 SUM 计算，不回源 OSS。
+    """
+    from app.models.image import Image
+    from app.models.student import Student
+    from app.models.tag import Tag
+    from app.models.tag_group import TagGroup
+
+    photo_count = db.query(Image).count()
+    student_count = db.query(Student).count()
+    tag_count = db.query(Tag).count()
+    tag_group_count = db.query(TagGroup).count()
+    storage_bytes = db.query(func.coalesce(func.sum(Image.file_size), 0)).scalar()
+
+    return DashboardStatsResponse(
+        photo_count=photo_count,
+        student_count=student_count,
+        tag_count=tag_count,
+        tag_group_count=tag_group_count,
+        storage_bytes=storage_bytes,
+    )
 
 
 @router.put("/students/{student_id}", response_model=StudentResponse)

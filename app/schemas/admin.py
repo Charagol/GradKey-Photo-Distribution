@@ -132,3 +132,16 @@ class ImageBatchDeleteRequest(BaseModel):
     """批量删除图片请求 — V3.0 Phase 22。"""
 
     image_ids: list[int]
+
+
+# ── Dashboard ──
+
+
+class DashboardStatsResponse(BaseModel):
+    """V4.0 P5: 管理端仪表盘统计数据。"""
+
+    photo_count: int
+    student_count: int
+    tag_count: int
+    tag_group_count: int
+    storage_bytes: int

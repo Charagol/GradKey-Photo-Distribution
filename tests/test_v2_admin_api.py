@@ -690,3 +690,107 @@ class TestImageBatchDelete:
             json={"image_ids": [self.img1["id"]]},
         )
         assert resp.status_code == 401
+
+
+# ============================================================================
+# V4.0 P5: Dashboard Stats Tests
+# ============================================================================
+
+
+class TestDashboardStats:
+    """V4.0 P5: GET /api/admin/dashboard/stats 测试。"""
+
+    def test_dashboard_stats_empty(self, client):
+        """空数据库 → 全部返回 0（tag_group_count 至少 1，含默认"未分类"分组）。"""
+        headers = _admin_auth(client)
+
+        resp = client.get("/api/admin/dashboard/stats", headers=headers)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["photo_count"] == 0
+        assert data["student_count"] == 0
+        assert data["tag_count"] == 0
+        assert data["tag_group_count"] >= 1   # fixture 已创建默认"未分类"分组
+        assert data["storage_bytes"] == 0
+
+    def test_dashboard_stats_with_data(self, client):
+        """有数据时返回正确的统计数。"""
+        headers = _admin_auth(client)
+
+        # 创建学生（3人）+ 标签（2个）→ 自动创建同名 Tag
+        client.post(
+            "/api/admin/students",
+            json={"names": "张三，李四，王五"},
+            headers=headers,
+        )
+
+        # 创建标签分组
+        client.post(
+            "/api/admin/tag-groups", json={"name": "年级"}, headers=headers
+        )
+
+        # 上传图片
+        _upload_image(client, headers, "test.jpg", None)
+        _upload_image(client, headers, "test2.jpg", None)
+
+        resp = client.get("/api/admin/dashboard/stats", headers=headers)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["photo_count"] == 2
+        assert data["student_count"] == 3
+        # "张三、李四、王五" 各自动创建同名 Tag + 可能有默认 tag
+        assert data["tag_count"] >= 3
+        # 默认"未分类" + "年级"
+        assert data["tag_group_count"] >= 2
+        # storage_bytes: mock 上传文件大小为 b"fake-image-bytes" (16 bytes) × 2 = 32
+        assert data["storage_bytes"] == 32
+
+
+# ============================================================================
+# V4.0 P5: CSV Export Tests
+# ============================================================================
+
+
+class TestStudentExportCsv:
+    """V4.0 P5: GET /api/admin/students/export 测试。"""
+
+    def test_export_students_csv(self, client):
+        """导出学生名单 → Content-Type: text/csv，内容正确。"""
+        headers = _admin_auth(client)
+
+        # 创建学生
+        client.post(
+            "/api/admin/students",
+            json={"names": "张三，李四"},
+            headers=headers,
+        )
+
+        resp = client.get("/api/admin/students/export", headers=headers)
+        assert resp.status_code == 200
+        assert resp.headers["content-type"].startswith("text/csv")
+        assert "students_export.csv" in resp.headers["content-disposition"]
+
+        body = resp.text
+        lines = body.strip().split("\r\n") if "\r\n" in body else body.strip().split("\n")
+        assert len(lines) == 2
+
+        # 每行格式："姓名","密钥"
+        for line in lines:
+            parts = line.split(",")
+            assert len(parts) == 2
+            assert parts[0].startswith('"') and parts[0].endswith('"')
+            assert parts[1].startswith('"') and parts[1].endswith('"')
+
+    def test_export_students_empty(self, client):
+        """空学生列表 → 返回空 body。"""
+        headers = _admin_auth(client)
+
+        resp = client.get("/api/admin/students/export", headers=headers)
+        assert resp.status_code == 200
+        assert resp.headers["content-type"].startswith("text/csv")
+        assert resp.text == "" or resp.text.strip() == ""
+
+    def test_export_students_unauthorized(self, client):
+        """无认证 → 401。"""
+        resp = client.get("/api/admin/students/export")
+        assert resp.status_code == 401
