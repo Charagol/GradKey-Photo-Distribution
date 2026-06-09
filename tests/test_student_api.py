@@ -350,6 +350,7 @@ class TestPrivacyIsolation:
         for img in data["images"]:
             assert img["url"].startswith("https://fake-oss")
             assert img.get("thumbnail_url", "").startswith("https://fake-oss")
+            assert img.get("lightbox_url", "").startswith("https://fake-oss")  # V4.0: w_1200 Lightbox
             assert "file_key" in img
             assert "tags" in img
 

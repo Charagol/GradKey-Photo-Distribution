@@ -572,8 +572,8 @@ function updateLightboxContent() {
     void lightboxImg.offsetWidth;
     lightboxImg.classList.add('animate-fade-in');
 
-    // Use original URL for full resolution in lightbox
-    lightboxImg.src = img.url;
+    // V4.0: 优先 w_1200 Lightbox 缩略图，降级 w_400 缩略图（不再使用原图 url）
+    lightboxImg.src = img.lightbox_url || img.thumbnail_url;
     lightboxImg.alt = img.file_name || '照片';
 
     counter.textContent = `${state.lightboxIndex + 1} / ${images.length}`;

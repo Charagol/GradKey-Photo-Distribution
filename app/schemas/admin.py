@@ -117,6 +117,7 @@ class ImageResponse(BaseModel):
     uploaded_at: datetime
     url: str
     thumbnail_url: str | None = None  # V3.0: 缩略图签名 URL
+    lightbox_url: str | None = None    # V4.0: w_1200 Lightbox 缩略图 URL
     tags: list[TagResponse] = []
 
 

@@ -92,6 +92,7 @@ async def my_images(
     for img in images:
         url = await storage.get_signed_url(img.file_key)
         thumbnail_url = await storage.get_thumbnail_signed_url(img.file_key)
+        lightbox_url = await storage.get_thumbnail_signed_url(img.file_key, width=1200)  # V4.0: w_1200 Lightbox
         result.append(
             ImageResponse(
                 id=img.id,
@@ -102,6 +103,7 @@ async def my_images(
                 uploaded_at=img.uploaded_at,
                 url=url,
                 thumbnail_url=thumbnail_url,
+                lightbox_url=lightbox_url,
                 tags=[TagResponse.model_validate(t) for t in img.tags],
             )
         )

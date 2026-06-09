@@ -279,13 +279,35 @@ class ITaggingService(ABC):
 
 ---
 
+### Phase 24: V4.0 P2 — Lightbox w_1200 缩略图 + 引导文案
+
+**背景**: Lightbox 加载原图（3-10MB）导致加载延迟和带宽浪费。V4.0 P2 改为 w_1200 缩略图，移除「查看原图」入口，引导用户走向多选下载。
+
+#### 后端
+
+- [x] `ImageResponse` schema 新增 `lightbox_url: str | None = None` 字段
+- [x] `GET /api/student/my-images` 新增 `get_thumbnail_signed_url(file_key, width=1200)` 调用，填充 `lightbox_url`
+
+#### 前端
+
+- [x] `updateLightboxContent()`: `img.url` → `img.lightbox_url \|\| img.thumbnail_url`（优先 w_1200，降级 w_400）
+- [x] `student.html` Lightbox 底部新增引导文案：「如需要高清原图，请使用多选下载功能」
+- [x] 无「查看原图」按钮 — 学生需要原图的唯一场景是本地保存，即多选队列下载
+
+#### 测试覆盖
+
+- [x] `test_images_have_signed_urls` 新增 `lightbox_url` 字段断言
+- [x] 108/108 全量测试通过
+
+---
+
 ## 项目总结
 
 ### 开发规模
 
 | 指标 | 数值 |
 |---|---|
-| 总 Phase 数 | 24 |
+| 总 Phase 数 | 25 |
 | 后端代码 (Python) | ~2000 行 |
 | 前端代码 (HTML + JS) | ~2000 行 |
 | 测试用例 | 108 (全量通过) |
@@ -309,4 +331,4 @@ class ITaggingService(ABC):
 
 ---
 
-*最后更新: 2026-06-09 | V4.0 P1 完成*
+*最后更新: 2026-06-09 | V4.0 P2 完成*
