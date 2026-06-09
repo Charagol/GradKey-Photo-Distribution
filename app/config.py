@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     oss_access_key: str = ""
     oss_secret: str = ""
     oss_bucket: str = ""
-    oss_signed_url_expires: int = 900
+    oss_signed_url_expires: int = 3600  # V4.0 P7-1: 1h 覆盖浏览器缓存窗口
 
     # --- 数据库配置 ---
     database_url: str = "sqlite:///album.db"

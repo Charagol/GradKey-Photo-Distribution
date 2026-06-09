@@ -11,6 +11,9 @@
 // ==========================================================================
 // Global State (single source of truth)
 // ==========================================================================
+// V4.0 P7-1: 图片列表 TTL 缓存时间戳（30min 新鲜窗口）
+window._imagesLoadedAt = null;
+
 const state = {
     // Auth
     token: null,
@@ -433,6 +436,7 @@ function bindEvents() {
         if (confirm(`确定删除图片「${name}」吗？`)) {
             apiDelete(`/api/admin/images/${id}`).then(() => {
                 showToast('图片已删除', 'success');
+                window._imagesLoadedAt = null;
                 loadImages().then(() => renderAllImages());
             }).catch(err => showToast(err.message, 'error'));
         }
@@ -596,8 +600,15 @@ async function loadAllWorkspaceData() {
 }
 
 async function loadImages() {
+    // V4.0 P7-1: TTL 缓存 — 30min 内复用已加载数据，避免重复生成签名 URL
+    const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
+    if (window._imagesLoadedAt && (Date.now() - window._imagesLoadedAt < CACHE_TTL)) {
+        return; // cache hit — state.allImages already populated
+    }
+
     const data = await apiGet('/api/admin/images');
     state.allImages = data.images || [];
+    window._imagesLoadedAt = Date.now();
 }
 
 async function loadTagGroups() {
@@ -1243,6 +1254,7 @@ async function saveImageTags() {
         showToast('标签已更新', 'success');
 
         // Reload all data to refresh state
+        window._imagesLoadedAt = null;
         await loadImages();
         splitImages();
         renderWorkspace();
@@ -1510,6 +1522,7 @@ async function uploadImages() {
             showToast(`成功上传 ${data.images.length} 张图片`, 'success');
             filesInput.value = '';
             statusEl.classList.add('hidden');
+            window._imagesLoadedAt = null;
             await loadImages();
             renderAllImages();
             return; // success — exit retry loop
@@ -1627,6 +1640,7 @@ async function batchDeleteSelected() {
         // Exit multi-select and reload
         state.isMultiSelectMode = false;
         state.selectedImageIds = new Set();
+        window._imagesLoadedAt = null;
         await loadImages();
         renderImageMultiSelectBar();
         renderAllImages();
