@@ -53,6 +53,37 @@
 
 ---
 
+## Docker 部署（V4.0 新增）
+
+一行启动：
+
+```bash
+docker-compose up -d
+```
+
+首次部署步骤：
+
+```bash
+# 1. 配置环境变量
+cp .env.example .env
+# 编辑 .env：填写 OSS 配置 + 修改 DATABASE_URL=sqlite:///data/album.db
+
+# 2. 启动服务
+docker-compose up -d
+
+# 3. 验证
+curl http://localhost:8000/
+```
+
+说明：
+- 数据库文件自动创建于 `./data/album.db`，容器销毁后数据不丢失
+- 无需手动 `pip install` 或运行迁移脚本
+- 管理后台：http://localhost:8000/admin | 学生门户：http://localhost:8000/student
+
+手动部署请参考下方「快速开始」。
+
+---
+
 ## 快速开始
 
 ### 环境要求

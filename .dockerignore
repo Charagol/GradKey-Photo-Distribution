@@ -1,0 +1,33 @@
+# V4.0 P8: Docker 构建忽略文件
+# 排除开发/测试/环境文件，保持镜像精简
+
+# Python 缓存
+__pycache__/
+*.pyc
+*.pyo
+
+# 虚拟环境
+.venv/
+venv/
+
+# 数据库文件（通过 volume 挂载，不打包进镜像）
+*.db
+
+# 环境配置（通过 docker-compose env_file 注入）
+.env
+
+# 测试与工具
+.pytest_cache/
+.qoder/
+tests/
+
+# Git
+.git/
+.gitignore
+
+# 运行时数据目录（通过 volume 挂载）
+data/
+
+# 文档（运行时不需要）
+*.md
+docs/

@@ -1,0 +1,20 @@
+# V4.0 P8: Docker Compose 部署配置
+# 使用方式:
+#   1. cp .env.example .env 并填写 OSS 配置
+#   2. 确保 .env 中 DATABASE_URL=sqlite:///data/album.db （Docker 数据持久化路径）
+#   3. docker-compose up -d
+
+version: "3.8"
+
+services:
+  album:
+    build: .
+    ports:
+      - "8000:8000"
+    # 环境变量从 .env 文件注入（不含数据库，不含 Key 不打包进镜像）
+    env_file:
+      - .env
+    # 数据库持久化：容器销毁后数据保留在宿主机 ./data 目录
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped

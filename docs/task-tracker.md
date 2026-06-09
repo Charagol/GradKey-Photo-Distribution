@@ -404,16 +404,82 @@ class ITaggingService(ABC):
 
 ---
 
+### Phase 28: V4.0 P7 — 性能调优
+
+**背景**: 管理端 Tab 切换频繁触发冗余 API 请求，SQLite 默认 journal 模式读写互斥，Tailwind 依赖外部 CDN，数据库连接池使用默认参数。P7 四项子任务同时实施。
+
+#### P7-1: 浏览器缓存优化
+
+- [x] `static/js/admin.js`:
+  - 新增全局变量 `window._imagesLoadedAt`（图片列表加载时间戳）
+  - `loadImages()` 开头检查 TTL：若 `Date.now() - _imagesLoadedAt < 30min` → 直接返回（缓存命中，复用 `state.allImages`）
+  - 请求成功后更新 `_imagesLoadedAt = Date.now()`
+  - 4 处缓存失效点（强制下次刷新）：① 单张删除 ② 标签编辑保存 ③ 上传成功 ④ 批量删除
+- [x] `app/config.py`: `oss_signed_url_expires` 从 900 延长至 3600（1h，覆盖 2 个缓存窗口，确保缓存命中时签名 URL 未过期）
+
+#### P7-2: SQLite WAL 模式
+
+- [x] `app/database.py`:
+  - `from sqlalchemy import event` 引入事件监听
+  - SQLite 环境下：`@event.listens_for(engine, "connect")` → `PRAGMA journal_mode=WAL`
+  - WAL 模式下读不阻塞写，提升并发场景吞吐
+
+#### P7-3: Tailwind CSS 本地化
+
+- [x] 路线选择：**下载 CDN 脚本文件**（方案 A）——直接 `fetch` `https://cdn.tailwindcss.com` → 保存为 `static/tailwind.js`（407 KB）
+- [x] `static/admin.html` + `static/student.html`: 引用从 `<script src="https://cdn.tailwindcss.com">` 改为 `<script src="/static/tailwind.js">`
+- [x] 消除外部 CDN 依赖，离线环境也可正常运行
+
+#### P7-4: 数据库连接池参数
+
+- [x] `app/database.py` `create_engine()`: 新增 `pool_size=3, max_overflow=5, pool_pre_ping=True`
+  - `pool_size=3`：维持 3 个常驻连接（单机场景足够了）
+  - `max_overflow=5`：峰值可额外创建 5 个（总上限 8）
+  - `pool_pre_ping=True`：借用前 ping 验证连接有效性，避免使用已断开连接
+
+#### 测试覆盖
+
+- [x] 113/113 全量测试通过（纯基础设施/前端改动，后端仅 config 值变更）
+
+---
+
+### Phase 29: V4.0 P8 — Docker 工程化
+
+**背景**: 项目依赖 `pip install` + 手动 `uvicorn` 启动，无容器化支持。P8 新增 Dockerfile + docker-compose.yml，零业务代码侵入。
+
+#### 新增文件
+
+- [x] `Dockerfile` — 基于 `python:3.11-slim` 构建
+  - 分层构建：requirements.txt → pip install → COPY 项目代码（利用 layer cache）
+  - `.env` 和 `*.db` 不打包进镜像（通过 docker-compose env_file / volume 注入）
+- [x] `docker-compose.yml` — 单服务 `album`
+  - `env_file: .env` 注入环境变量
+  - `volumes: ./data:/app/data` 持久化数据库
+  - `restart: unless-stopped`
+  - 端口映射 `8000:8000`
+- [x] `.dockerignore` — 排除 `__pycache__/`, `.venv/`, `*.db`, `.env`, `.pytest_cache/`, `.qoder/`, `tests/`, `docs/`, `*.md`
+
+#### 配置说明
+
+- [x] `.env.example`: `DATABASE_URL` 注释补充 Docker 部署路径 (`sqlite:///data/album.db`)
+- [x] `README.md`: 新增 `## Docker 部署` 小节（一行启动 + 首次部署步骤）
+
+#### 测试覆盖
+
+- [x] 113/113 全量测试通过（零业务代码变更）
+
+---
+
 ## 项目总结
 
 ### 开发规模
 
 | 指标 | 数值 |
 |---|---|
-| 总 Phase 数 | 28 |
+| 总 Phase 数 | 30 |
 | 后端代码 (Python) | ~2000 行 |
 | 前端代码 (HTML + JS) | ~2000 行 |
-| 测试用例 | 108 (全量通过) |
+| 测试用例 | 113 (全量通过) |
 | 数据模型 | 6 个表 |
 | API 端点 | 24+ |
 
@@ -434,4 +500,4 @@ class ITaggingService(ABC):
 
 ---
 
-*最后更新: 2026-06-09 | V4.0 P4 完成*
+*最后更新: 2026-06-10 | V4.0 P8 完成*

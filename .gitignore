@@ -13,6 +13,8 @@ venv/
 # 数据库
 *.db
 *.db-journal
+*.db-shm
+*.db-wal
 
 # IDE
 .idea/
