@@ -2,7 +2,7 @@
  * 学生门户核心交互逻辑 — 毕业季专属相册 V2.0 (Phase 12)
  *
  * 架构：
- * - 状态管理：sessionStorage 持久化 JWT（关闭标签页即清除）
+ * - 状态管理：localStorage 持久化 JWT（含过期校验）
  * - 双重认证：相册密码 + 姓名 + 个人密钥
  * - 隐私隔离：后端只返回 Tag 匹配的照片，前端按标签过滤
  * - Lightbox：全屏预览 + 键盘导航 + 触摸滑动
@@ -35,12 +35,16 @@ const state = {
 
 document.addEventListener('DOMContentLoaded', () => {
     bindEvents();
-    state.token = sessionStorage.getItem('student_token');
-    state.studentName = sessionStorage.getItem('student_name');
-    if (state.token && state.studentName) {
+    state.token = localStorage.getItem('student_token');
+    state.studentName = localStorage.getItem('student_name');
+    if (state.token && state.studentName && !isTokenExpired(state.token)) {
         showMain();
         loadData();
     } else {
+        if (state.token) localStorage.removeItem('student_token');
+        if (state.studentName) localStorage.removeItem('student_name');
+        state.token = null;
+        state.studentName = null;
         showLogin();
     }
 });
@@ -62,8 +66,8 @@ function showMain() {
 }
 
 function clearToken() {
-    sessionStorage.removeItem('student_token');
-    sessionStorage.removeItem('student_name');
+    localStorage.removeItem('student_token');
+    localStorage.removeItem('student_name');
     state.token = null;
     state.studentName = null;
     state.allImages = [];
@@ -73,6 +77,19 @@ function clearToken() {
     state.selectedIds = new Set();
     state.downloadProgress = null;
     state.downloadAborted = false;
+}
+
+/**
+ * JWT exp 校验：解析 payload.exp 与当前时间对比。
+ * 返回 true = 需重新登录（已过期 / 非 JWT 格式 / 无 exp 字段）。
+ */
+function isTokenExpired(token) {
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        return !payload.exp || payload.exp < Math.floor(Date.now() / 1000);
+    } catch {
+        return true;
+    }
 }
 
 async function handleLogin() {
@@ -109,8 +126,8 @@ async function handleLogin() {
         }
 
         const data = await resp.json();
-        sessionStorage.setItem('student_token', data.access_token);
-        sessionStorage.setItem('student_name', name);
+        localStorage.setItem('student_token', data.access_token);
+        localStorage.setItem('student_name', name);
         state.token = data.access_token;
         state.studentName = name;
 

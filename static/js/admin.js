@@ -44,11 +44,12 @@ const state = {
 // Initialization
 // ==========================================================================
 document.addEventListener('DOMContentLoaded', () => {
-    const savedToken = sessionStorage.getItem('admin_token');
-    if (savedToken) {
+    const savedToken = localStorage.getItem('admin_token');
+    if (savedToken && !isTokenExpired(savedToken)) {
         state.token = savedToken;
         showDashboard();
     } else {
+        if (savedToken) localStorage.removeItem('admin_token');
         showLogin();
     }
     bindEvents();
@@ -71,9 +72,22 @@ function showDashboard() {
 }
 
 function logout() {
-    sessionStorage.removeItem('admin_token');
+    localStorage.removeItem('admin_token');
     state.token = null;
     showLogin();
+}
+
+/**
+ * JWT exp 校验：解析 payload.exp 与当前时间对比。
+ * 返回 true = 需重新登录（已过期 / 非 JWT 格式 / 无 exp 字段）。
+ */
+function isTokenExpired(token) {
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        return !payload.exp || payload.exp < Math.floor(Date.now() / 1000);
+    } catch {
+        return true;
+    }
 }
 
 async function handleLogin() {
@@ -92,7 +106,7 @@ async function handleLogin() {
         }
         const data = await resp.json();
         state.token = data.access_token;
-        sessionStorage.setItem('admin_token', state.token);
+        localStorage.setItem('admin_token', state.token);
         showDashboard();
     } catch (err) {
         errorEl.textContent = err.message;

@@ -31,17 +31,8 @@
 
 ## Phase 进度
 
-### Phase 0–8: V1.0 — 基础架构与核心功能
-
-> **完成日期**: 2026-06-04 | **测试**: 61/61 | **状态**: 已封存
-
-项目脚手架、核心基础设施（FastAPI/SQLite/SQLAlchemy）、OSS 存储与打标服务、JWT 认证与学生服务、管理员 API 路由、学生 API 路由、管理前端（admin.html）、学生前端（student.html）、集成与收尾。详见 `docs/design-v1.md`。
-
-### Phase 9–15: V2.0 — 标签分组与沉浸式打标
-
-> **完成日期**: 2026-06-05 | **测试**: 98/98 | **状态**: 已封存
-
-数据库迁移引入 TagGroup 模型、管理端 API 升级（批量学生/标签分组 CRUD/图片标签替换/tagged 筛选）、沉浸式打标工作台重构、学生端多选队列下载、V2 集成测试、标签管理 UI 优化与安全删除、项目完结与交付物整理。详见 `docs/design-v2.md`。
+> **V1.0** (Phase 0–8, 2026-06-04, 61/61 测试) — 基础架构与核心功能。详见 `docs/design-v1.md`。
+> **V2.0** (Phase 9–15, 2026-06-05, 98/98 测试) — 标签分组与沉浸式打标。详见 `docs/design-v2.md`。
 
 ---
 
@@ -66,14 +57,7 @@ class ITaggingService(ABC):
 
 ---
 
-## V2.0 Phase 进度（已折叠）
-
-> Phase 9–15 详情见 `docs/design-v2.md`。以下为各 Phase 完成确认。
-
----
-
-
-### Phase 16–22: V3.0 — 缺陷修复与体验优化
+## V3.0 (Phase 16–22) — 缺陷修复与体验优化
 
 ### Phase 16: 标签管理页初始加载 Bug 修复
 
@@ -269,13 +253,39 @@ class ITaggingService(ABC):
 
 ---
 
+## V4.0 (Phase 23+) — 工程化与体验大版本
+
+### Phase 23: V4.0 P1 — 登录 localStorage 持久化 + JWT exp 校验
+
+**背景**: V3.0 使用 sessionStorage 存储 JWT，学生关闭标签页后登录态丢失，刷新页面即被迫重登。V4.0 P1 迁移至 localStorage 并增加过期校验。
+
+#### 存储迁移
+
+- [x] `static/js/admin.js`: 4 处 `sessionStorage` → `localStorage`（初始化/L47、登出/L74、登录成功/L96）+ 另外 2 处同区块（初始化和登出各包含 1 个 getItem/removeItem）
+- [x] `static/js/student.js`: 7 处 `sessionStorage` → `localStorage`（init×2/L38-L39、clearToken×2/L69-L70、login×2/L116-L117）+ L5 头部注释更新
+
+#### JWT exp 校验
+
+- [x] 新增 `isTokenExpired(token)` 函数（两个文件各自实现）
+  - 解析 `payload.exp` 与 `Math.floor(Date.now() / 1000)` 对比
+  - 缺 `exp` 字段 → `!payload.exp` → 视为过期
+  - 非 JWT 格式 / `atob` 失败 / `JSON.parse` 失败 → `catch` → 视为过期
+- [x] 初始化流程改造：`admin.js` 和 `student.js` 均在 `DOMContentLoaded` 中校验 token 有效性，过期则清除 localStorage 后进登录页
+- [x] 后端零改动
+
+#### 测试覆盖
+
+- [x] 108/108 全量测试通过（纯前端改动，后端行为不变）
+
+---
+
 ## 项目总结
 
 ### 开发规模
 
 | 指标 | 数值 |
 |---|---|
-| 总 Phase 数 | 23 (含本次文档 Phase) |
+| 总 Phase 数 | 24 |
 | 后端代码 (Python) | ~2000 行 |
 | 前端代码 (HTML + JS) | ~2000 行 |
 | 测试用例 | 108 (全量通过) |
@@ -299,4 +309,4 @@ class ITaggingService(ABC):
 
 ---
 
-*最后更新: 2026-06-09 | V3.0 文档重组*
+*最后更新: 2026-06-09 | V4.0 P1 完成*
